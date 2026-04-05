@@ -12,12 +12,12 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DATA-01**: Team can download and sample CFPB complaints into a reproducible 10K narrative dataset.
 - [x] **DATA-02**: System can precompute embeddings for a 5K complaint subset using `all-MiniLM-L6-v2` via offline batch script.
 - [ ] **DATA-03**: System includes five curated golden demo complaints that can be loaded on demand.
-- [ ] **DATA-04**: Intake pipeline can append extracted text from mock receipt documents before classification.
+- [x] **DATA-04**: Intake pipeline can append extracted text from mock receipt documents before classification.
 
 ### Pipeline and State
 
-- [ ] **FLOW-01**: System scrubs PII from complaint text before any LLM call.
-- [ ] **FLOW-02**: Graph routes low-confidence classification results to human review interrupt flow.
+- [x] **FLOW-01**: System scrubs PII from complaint text before any LLM call.
+- [x] **FLOW-02**: Graph routes low-confidence classification results to human review interrupt flow.
 - [ ] **FLOW-03**: Graph state stores message history so auditor critiques can influence response rewrites.
 - [ ] **FLOW-04**: Pipeline handles empty input, long complaints, and ambiguous text without crashing.
 - [ ] **FLOW-05**: Every node writes structured decision logs to SQLite with timestamp and model metadata.
@@ -25,7 +25,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Agent Intelligence
 
 - [x] **AGT-01**: LLM client retries 429s with backoff and falls back `llama-3.3-70b-versatile -> mixtral-8x7b-32768 -> llama-3.1-8b-instant`.
-- [ ] **AGT-02**: Classifier returns strict JSON with `product_type`, `issue_type`, `severity`, `compliance_risk`, and `confidence`.
+- [x] **AGT-02**: Classifier returns strict JSON with `product_type`, `issue_type`, `severity`, `compliance_risk`, and `confidence`.
 - [ ] **AGT-03**: Root-cause agent uses top-5 retrieved similar complaints as context.
 - [ ] **AGT-04**: Remediator calls MCP tool `get_sla_requirements(issue_type, state_code)` before proposing action.
 - [ ] **AGT-05**: Response writer generates customer-facing draft with clear resolution statement and safe tone.
@@ -90,10 +90,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-02 | Phase 1 | Complete (2026-04-05) |
 | AGT-01 | Phase 1 | Complete (2026-04-05) |
 | OPS-01 | Phase 1 | Complete (2026-04-05) |
-| DATA-04 | Phase 2 | Pending |
-| FLOW-01 | Phase 2 | Pending |
-| FLOW-02 | Phase 2 | Pending |
-| AGT-02 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Complete (2026-04-05) |
+| FLOW-01 | Phase 2 | Complete (2026-04-05) |
+| FLOW-02 | Phase 2 | Complete (2026-04-05) |
+| AGT-02 | Phase 2 | Complete (2026-04-05) |
 | AGT-03 | Phase 3 | Pending |
 | AGT-04 | Phase 3 | Pending |
 | FLOW-05 | Phase 3 | Pending |

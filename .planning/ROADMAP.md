@@ -13,7 +13,7 @@ This roadmap converts the `plan2.md` architecture into a one-week executable seq
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation and Runtime Baseline** - Project scaffold, data prep, and robust Groq client setup (Completed: 2026-04-05)
-- [ ] **Phase 2: Intake Intelligence and Classification Routing** - PII-safe intake plus confidence-aware classification
+- [x] **Phase 2: Intake Intelligence and Classification Routing** - PII-safe intake plus confidence-aware classification (Completed: 2026-04-05)
 - [ ] **Phase 3: Root Cause and MCP-Grounded Remediation** - RAG diagnosis and policy tool integration
 - [ ] **Phase 4: Response Generation with Compliance Audit Loop** - Drafting, self-correction cycle, and explainability chain
 - [ ] **Phase 5: Streamlit HITL Dashboard** - Interactive controls, thread-safe resume, and audit visibility
@@ -48,9 +48,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Implement PII scrubber and optional mock OCR text merge
-- [ ] 02-02: Build classifier agent and schema validation/retry behavior
-- [ ] 02-03: Add confidence-based routing logic and interrupt handling
+- [x] 02-01: Implement PII scrubber and optional mock OCR text merge
+- [x] 02-02: Build classifier agent and schema validation/retry behavior
+- [x] 02-03: Add confidence-based routing logic and interrupt handling
 
 ### Phase 3: Root Cause and MCP-Grounded Remediation
 **Goal**: Deliver diagnosis plus policy-grounded remediation recommendations.
@@ -134,7 +134,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Runtime Baseline | 3/3 | Complete | 2026-04-05 |
-| 2. Intake Intelligence and Classification Routing | 0/3 | Not started | - |
+| 2. Intake Intelligence and Classification Routing | 3/3 | Complete | 2026-04-05 |
 | 3. Root Cause and MCP-Grounded Remediation | 0/3 | Not started | - |
 | 4. Response Generation with Compliance Audit Loop | 0/3 | Not started | - |
 | 5. Streamlit HITL Dashboard | 0/3 | Not started | - |
