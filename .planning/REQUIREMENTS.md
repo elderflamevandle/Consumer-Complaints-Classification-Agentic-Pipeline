@@ -20,14 +20,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FLOW-02**: Graph routes low-confidence classification results to human review interrupt flow.
 - [ ] **FLOW-03**: Graph state stores message history so auditor critiques can influence response rewrites.
 - [ ] **FLOW-04**: Pipeline handles empty input, long complaints, and ambiguous text without crashing.
-- [ ] **FLOW-05**: Every node writes structured decision logs to SQLite with timestamp and model metadata.
+- [x] **FLOW-05**: Every node writes structured decision logs to SQLite with timestamp and model metadata.
 
 ### Agent Intelligence
 
 - [x] **AGT-01**: LLM client retries 429s with backoff and falls back `llama-3.3-70b-versatile -> mixtral-8x7b-32768 -> llama-3.1-8b-instant`.
 - [x] **AGT-02**: Classifier returns strict JSON with `product_type`, `issue_type`, `severity`, `compliance_risk`, and `confidence`.
-- [ ] **AGT-03**: Root-cause agent uses top-5 retrieved similar complaints as context.
-- [ ] **AGT-04**: Remediator calls MCP tool `get_sla_requirements(issue_type, state_code)` before proposing action.
+- [x] **AGT-03**: Root-cause agent uses top-5 retrieved similar complaints as context.
+- [x] **AGT-04**: Remediator calls MCP tool `get_sla_requirements(issue_type, state_code)` before proposing action.
 - [ ] **AGT-05**: Response writer generates customer-facing draft with clear resolution statement and safe tone.
 - [ ] **AGT-06**: Compliance auditor evaluates response and routes fail cases back to response writer.
 - [ ] **AGT-07**: Explainer produces concise rationale chain for classification, diagnosis, remediation, and final response.
@@ -94,9 +94,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FLOW-01 | Phase 2 | Complete (2026-04-05) |
 | FLOW-02 | Phase 2 | Complete (2026-04-05) |
 | AGT-02 | Phase 2 | Complete (2026-04-05) |
-| AGT-03 | Phase 3 | Pending |
-| AGT-04 | Phase 3 | Pending |
-| FLOW-05 | Phase 3 | Pending |
+| AGT-03 | Phase 3 | Complete |
+| AGT-04 | Phase 3 | Complete |
+| FLOW-05 | Phase 3 | Complete |
 | AGT-05 | Phase 4 | Pending |
 | AGT-06 | Phase 4 | Pending |
 | AGT-07 | Phase 4 | Pending |
