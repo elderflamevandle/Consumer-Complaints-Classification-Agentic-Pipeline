@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from src.llm.client import GroqLLMClient
 from src.schemas.classification import ClassificationResult
 from src.schemas.root_cause import RootCauseResult
+from src.tools.audit_logger import AuditLogger
 from src.tools.mcp_policy_client import MCPPolicyClient, PolicyLookupResult
 
 
@@ -44,9 +45,11 @@ class RemediatorAgent:
         llm_client: GroqLLMClient | None = None,
         transport: Any | None = None,
         mcp_client: MCPPolicyClient | None = None,
+        audit_logger: AuditLogger | None = None,
     ) -> None:
         self._client = llm_client or GroqLLMClient(transport=transport)
         self._mcp = mcp_client or MCPPolicyClient()
+        self._audit_logger = audit_logger
         self.call_order: list[str] = []
         self.last_model: str | None = None
 
@@ -57,6 +60,7 @@ class RemediatorAgent:
         classification: ClassificationResult,
         diagnosis: RootCauseResult,
         state_code: str,
+        thread_id: str | None = None,
     ) -> RemediationResult:
         self.call_order = []
         self.call_order.append('mcp')
@@ -65,12 +69,19 @@ class RemediatorAgent:
             state_code=state_code,
         )
         if not policy_result.available:
-            return RemediationResult(
+            result = RemediationResult(
                 status='POLICY_UNAVAILABLE',
                 route='human_review',
                 action_plan=[],
                 policy_citations={},
             )
+            self._log_outcome(
+                thread_id=thread_id,
+                model='mcp-policy-gate',
+                decision='policy_unavailable',
+                scrubbed_text=complaint_text,
+            )
+            return result
 
         policy = policy_result.policy
         assert policy is not None
@@ -108,12 +119,19 @@ class RemediatorAgent:
             'required_actions': list(policy.required_actions),
             'regulatory_basis': policy.regulatory_basis,
         }
-        return RemediationResult(
+        result = RemediationResult(
             status='ok',
             route='continue',
             action_plan=steps,
             policy_citations=citations,
         )
+        self._log_outcome(
+            thread_id=thread_id,
+            model=response.model,
+            decision='policy_grounded_action_plan',
+            scrubbed_text=complaint_text,
+        )
+        return result
 
     def _build_prompt(
         self,
@@ -149,6 +167,25 @@ class RemediatorAgent:
             return None
         return [item.strip() for item in parsed.action_plan if item.strip()]
 
+    def _log_outcome(
+        self,
+        *,
+        thread_id: str | None,
+        model: str,
+        decision: str,
+        scrubbed_text: str,
+    ) -> None:
+        if thread_id is None or self._audit_logger is None:
+            return
+        self._audit_logger.log_node_outcome(
+            thread_id=thread_id,
+            node='remediator',
+            model=model,
+            latency_ms=0,
+            decision=decision,
+            scrubbed_text=scrubbed_text[:220],
+        )
+
 
 def _extract_json_object(text: str) -> str | None:
     stripped = text.strip()
@@ -166,4 +203,3 @@ def _extract_json_object(text: str) -> str | None:
     if any_json:
         return any_json.group(1)
     return None
-

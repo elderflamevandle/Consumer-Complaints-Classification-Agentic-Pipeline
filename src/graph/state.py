@@ -37,3 +37,4 @@ class RoutingState(BaseModel):
     interrupt_payload: ReviewInterruptPayload | None = None
     review_action: ReviewerAction | None = None
     events: list[str] = Field(default_factory=list)
+    last_logged_nodes: list[str] = Field(default_factory=list)

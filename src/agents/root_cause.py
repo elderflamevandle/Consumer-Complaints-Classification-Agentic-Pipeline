@@ -17,6 +17,7 @@ from src.schemas.root_cause import (
     RootCauseEvidence,
     RootCauseResult,
 )
+from src.tools.audit_logger import AuditLogger
 from src.tools.vector_search import RetrievedCase, retrieve_similar_cases
 
 SCHEMA_REPAIR_RETRIES = 1
@@ -30,10 +31,12 @@ class RootCauseAgent:
         transport: Any | None = None,
         retriever: Callable[..., list[RetrievedCase]] | None = None,
         repair_retries: int = SCHEMA_REPAIR_RETRIES,
+        audit_logger: AuditLogger | None = None,
     ) -> None:
         self._client = llm_client or GroqLLMClient(transport=transport)
         self._retriever = retriever or retrieve_similar_cases
         self.repair_retries = repair_retries
+        self._audit_logger = audit_logger
         self.last_llm_attempts = 0
         self.used_fallback = False
 
@@ -42,6 +45,7 @@ class RootCauseAgent:
         complaint_text: str,
         *,
         limit: int = 5,
+        thread_id: str | None = None,
     ) -> RootCauseResult:
         cases = self._retriever(query_text=complaint_text, limit=limit)
         self.last_llm_attempts = 0
@@ -60,12 +64,25 @@ class RootCauseAgent:
             raw_output = response.text
             parsed = self._parse_or_none(raw_output)
             if parsed is not None:
+                self._log_outcome(
+                    thread_id=thread_id,
+                    model=response.model,
+                    decision=f'diagnosis_{parsed.ambiguity_flag.value.lower()}',
+                    scrubbed_text=complaint_text,
+                )
                 return parsed
             if attempt < self.repair_retries:
                 prompt = self._repair_prompt(complaint_text, cases, raw_output)
 
         self.used_fallback = True
-        return self._fallback_result(cases)
+        fallback = self._fallback_result(cases)
+        self._log_outcome(
+            thread_id=thread_id,
+            model='heuristic-fallback',
+            decision=f'diagnosis_{fallback.ambiguity_flag.value.lower()}',
+            scrubbed_text=complaint_text,
+        )
+        return fallback
 
     def _parse_or_none(self, text: str) -> RootCauseResult | None:
         candidate = _extract_json_object(text)
@@ -186,6 +203,25 @@ class RootCauseAgent:
             root_cause=root_cause,
             evidence=evidence,
             ambiguity_flag=flag,
+        )
+
+    def _log_outcome(
+        self,
+        *,
+        thread_id: str | None,
+        model: str,
+        decision: str,
+        scrubbed_text: str,
+    ) -> None:
+        if thread_id is None or self._audit_logger is None:
+            return
+        self._audit_logger.log_node_outcome(
+            thread_id=thread_id,
+            node='root_cause',
+            model=model,
+            latency_ms=0,
+            decision=decision,
+            scrubbed_text=scrubbed_text[:220],
         )
 
 
