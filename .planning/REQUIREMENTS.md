@@ -9,8 +9,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data and Knowledge Base
 
-- [ ] **DATA-01**: Team can download and sample CFPB complaints into a reproducible 10K narrative dataset.
-- [ ] **DATA-02**: System can precompute embeddings for a 5K complaint subset using `all-MiniLM-L6-v2` via offline batch script.
+- [x] **DATA-01**: Team can download and sample CFPB complaints into a reproducible 10K narrative dataset.
+- [x] **DATA-02**: System can precompute embeddings for a 5K complaint subset using `all-MiniLM-L6-v2` via offline batch script.
 - [ ] **DATA-03**: System includes five curated golden demo complaints that can be loaded on demand.
 - [ ] **DATA-04**: Intake pipeline can append extracted text from mock receipt documents before classification.
 
@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Agent Intelligence
 
-- [ ] **AGT-01**: LLM client retries 429s with backoff and falls back `llama-3.3-70b-versatile -> mixtral-8x7b-32768 -> llama-3.1-8b-instant`.
+- [x] **AGT-01**: LLM client retries 429s with backoff and falls back `llama-3.3-70b-versatile -> mixtral-8x7b-32768 -> llama-3.1-8b-instant`.
 - [ ] **AGT-02**: Classifier returns strict JSON with `product_type`, `issue_type`, `severity`, `compliance_risk`, and `confidence`.
 - [ ] **AGT-03**: Root-cause agent uses top-5 retrieved similar complaints as context.
 - [ ] **AGT-04**: Remediator calls MCP tool `get_sla_requirements(issue_type, state_code)` before proposing action.
@@ -48,7 +48,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Operations and Delivery
 
-- [ ] **OPS-01**: Repository includes setup and run steps that let a new teammate start the system locally.
+- [x] **OPS-01**: Repository includes setup and run steps that let a new teammate start the system locally.
 - [ ] **OPS-02**: Automated tests cover fallback routing, schema validation, and core graph transitions.
 - [ ] **OPS-03**: Submission package includes architecture summary, setup instructions, and demo flow description.
 - [ ] **OPS-04**: Team has a short recorded backup demo and script for presentation-day contingency.
@@ -86,10 +86,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| AGT-01 | Phase 1 | Pending |
-| OPS-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete (2026-04-05) |
+| DATA-02 | Phase 1 | Complete (2026-04-05) |
+| AGT-01 | Phase 1 | Complete (2026-04-05) |
+| OPS-01 | Phase 1 | Complete (2026-04-05) |
 | DATA-04 | Phase 2 | Pending |
 | FLOW-01 | Phase 2 | Pending |
 | FLOW-02 | Phase 2 | Pending |

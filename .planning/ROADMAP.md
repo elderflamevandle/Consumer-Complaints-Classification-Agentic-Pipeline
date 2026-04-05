@@ -12,7 +12,7 @@ This roadmap converts the `plan2.md` architecture into a one-week executable seq
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation and Runtime Baseline** - Project scaffold, data prep, and robust Groq client setup
+- [x] **Phase 1: Foundation and Runtime Baseline** - Project scaffold, data prep, and robust Groq client setup (Completed: 2026-04-05)
 - [ ] **Phase 2: Intake Intelligence and Classification Routing** - PII-safe intake plus confidence-aware classification
 - [ ] **Phase 3: Root Cause and MCP-Grounded Remediation** - RAG diagnosis and policy tool integration
 - [ ] **Phase 4: Response Generation with Compliance Audit Loop** - Drafting, self-correction cycle, and explainability chain
@@ -33,9 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Initialize project structure, environment files, and setup commands
-- [ ] 01-02: Implement Groq client abstraction with fallback and token tracking
-- [ ] 01-03: Build dataset sampling and offline vector seeding scripts
+- [x] 01-01: Initialize project structure, environment files, and setup commands
+- [x] 01-02: Implement Groq client abstraction with fallback and token tracking
+- [x] 01-03: Build dataset sampling and offline vector seeding scripts
 
 ### Phase 2: Intake Intelligence and Classification Routing
 **Goal**: Build safe intake processing and reliable first-step routing.
@@ -133,7 +133,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Runtime Baseline | 0/3 | Not started | - |
+| 1. Foundation and Runtime Baseline | 3/3 | Complete | 2026-04-05 |
 | 2. Intake Intelligence and Classification Routing | 0/3 | Not started | - |
 | 3. Root Cause and MCP-Grounded Remediation | 0/3 | Not started | - |
 | 4. Response Generation with Compliance Audit Loop | 0/3 | Not started | - |
