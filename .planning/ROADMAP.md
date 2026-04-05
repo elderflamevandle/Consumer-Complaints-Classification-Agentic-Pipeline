@@ -63,9 +63,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Implement vector retrieval and root-cause agent behavior
-- [ ] 03-02: Implement FastMCP server and remediator MCP client integration
-- [ ] 03-03: Wire audit logger hooks across active graph nodes
+- [x] 03-01: Implement vector retrieval and root-cause agent behavior
+- [x] 03-02: Implement FastMCP server and remediator MCP client integration
+- [x] 03-03: Wire audit logger hooks across active graph nodes
 
 ### Phase 4: Response Generation with Compliance Audit Loop
 **Goal**: Produce response drafts that can self-correct under compliance review.
