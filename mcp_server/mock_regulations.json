@@ -1,0 +1,57 @@
+{
+  "default": {
+    "sla_window": "30 calendar days",
+    "required_actions": [
+      "Acknowledge complaint receipt",
+      "Open internal case and assign owner",
+      "Provide written resolution summary"
+    ],
+    "regulatory_basis": "CFPB complaint response baseline guidance"
+  },
+  "issues": {
+    "BILLING": {
+      "default": {
+        "sla_window": "21 calendar days",
+        "required_actions": [
+          "Validate disputed transaction details",
+          "Suspend late fees while investigation is active",
+          "Provide written investigation findings"
+        ],
+        "regulatory_basis": "Regulation Z billing error framework"
+      },
+      "states": {
+        "CA": {
+          "sla_window": "15 calendar days",
+          "required_actions": [
+            "Acknowledge complaint within 2 business days",
+            "Validate disputed charge and merchant evidence",
+            "Issue provisional credit if investigation exceeds 10 days"
+          ],
+          "regulatory_basis": "CA consumer financial complaint timing guidance"
+        }
+      }
+    },
+    "FRAUD": {
+      "default": {
+        "sla_window": "10 calendar days",
+        "required_actions": [
+          "Lock compromised account access",
+          "Start fraud investigation and document timeline",
+          "Provide customer update every 3 business days"
+        ],
+        "regulatory_basis": "Electronic fund transfer fraud handling standards"
+      },
+      "states": {
+        "NY": {
+          "sla_window": "7 calendar days",
+          "required_actions": [
+            "Escalate suspected fraud to specialized response unit",
+            "Issue temporary account protections and provisional credit",
+            "Share written case status every 48 hours"
+          ],
+          "regulatory_basis": "NYDFS consumer fraud response expectations"
+        }
+      }
+    }
+  }
+}
