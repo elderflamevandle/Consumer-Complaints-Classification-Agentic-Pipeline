@@ -45,7 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def get_task_commands(task_name: str) -> CommandGroup:
-    return TASK_COMMANDS[task_name]
+    try:
+        return TASK_COMMANDS[task_name]
+    except KeyError as error:
+        raise ValueError(f'Unsupported task: {task_name}') from error
 
 
 def run_task(task_name: str) -> int:
