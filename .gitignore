@@ -1,0 +1,15 @@
+.env
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+
+cfpb_data/
+chroma_db/
+complaints.csv.zip
+data/processed/
+
+plan.md
+plan2.md
+tests/data_exploration.ipynb
