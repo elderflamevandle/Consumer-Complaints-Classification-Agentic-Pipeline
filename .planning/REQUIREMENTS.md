@@ -18,7 +18,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **FLOW-01**: System scrubs PII from complaint text before any LLM call.
 - [x] **FLOW-02**: Graph routes low-confidence classification results to human review interrupt flow.
-- [ ] **FLOW-03**: Graph state stores message history so auditor critiques can influence response rewrites.
+- [x] **FLOW-03**: Graph state stores message history so auditor critiques can influence response rewrites.
 - [ ] **FLOW-04**: Pipeline handles empty input, long complaints, and ambiguous text without crashing.
 - [x] **FLOW-05**: Every node writes structured decision logs to SQLite with timestamp and model metadata.
 
@@ -28,9 +28,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **AGT-02**: Classifier returns strict JSON with `product_type`, `issue_type`, `severity`, `compliance_risk`, and `confidence`.
 - [x] **AGT-03**: Root-cause agent uses top-5 retrieved similar complaints as context.
 - [x] **AGT-04**: Remediator calls MCP tool `get_sla_requirements(issue_type, state_code)` before proposing action.
-- [ ] **AGT-05**: Response writer generates customer-facing draft with clear resolution statement and safe tone.
-- [ ] **AGT-06**: Compliance auditor evaluates response and routes fail cases back to response writer.
-- [ ] **AGT-07**: Explainer produces concise rationale chain for classification, diagnosis, remediation, and final response.
+- [x] **AGT-05**: Response writer generates customer-facing draft with clear resolution statement and safe tone.
+- [x] **AGT-06**: Compliance auditor evaluates response and routes fail cases back to response writer.
+- [x] **AGT-07**: Explainer produces concise rationale chain for classification, diagnosis, remediation, and final response.
 
 ### User Interface
 
@@ -97,10 +97,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGT-03 | Phase 3 | Complete |
 | AGT-04 | Phase 3 | Complete |
 | FLOW-05 | Phase 3 | Complete |
-| AGT-05 | Phase 4 | Pending |
-| AGT-06 | Phase 4 | Pending |
-| AGT-07 | Phase 4 | Pending |
-| FLOW-03 | Phase 4 | Pending |
+| AGT-05 | Phase 4 | Complete (2026-04-05) |
+| AGT-06 | Phase 4 | Complete (2026-04-05) |
+| AGT-07 | Phase 4 | Complete (2026-04-05) |
+| FLOW-03 | Phase 4 | Complete (2026-04-05) |
 | DATA-03 | Phase 5 | Pending |
 | UI-01 | Phase 5 | Pending |
 | UI-02 | Phase 5 | Pending |
@@ -122,4 +122,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after initial definition*
+*Last updated: 2026-04-05 after Phase 4 completion*
