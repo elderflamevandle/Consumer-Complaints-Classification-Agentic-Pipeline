@@ -6,7 +6,8 @@ from src.agents.auditor import AuditorAgent
 from src.agents.remediator import RemediationResult
 from src.agents.writer import WriterAgent
 from src.graph.state import ResponseCycleTrace, RoutingState
-from src.schemas.auditor import AuditVerdict
+from src.schemas.auditor import AuditVerdict, ResponseAuditResult
+from src.schemas.response import ResponseDraft
 from src.schemas.root_cause import RootCauseResult
 
 MAX_REWRITE_ATTEMPTS = 2
@@ -88,8 +89,8 @@ def execute_response_loop(
 def _record_cycle(
     state: RoutingState,
     *,
-    draft,
-    audit,
+    draft: ResponseDraft,
+    audit: ResponseAuditResult,
 ) -> RoutingState:
     cycle_number = len(state.response_cycles) + 1
     history = list(state.message_history)
