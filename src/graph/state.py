@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from src.schemas.auditor import ResponseAuditResult
 from src.schemas.classification import ClassificationResult
+from src.schemas.explainer import ExplanationResult
 from src.schemas.intake import IntakePreparation
 from src.schemas.response import ResponseDraft
 
@@ -55,3 +56,4 @@ class RoutingState(BaseModel):
     response_cycles: list[ResponseCycleTrace] = Field(default_factory=list)
     response_loop_status: ResponseLoopStatus = 'not_started'
     final_audit: ResponseAuditResult | None = None
+    final_explanation: ExplanationResult | None = None
