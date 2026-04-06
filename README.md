@@ -20,6 +20,13 @@ Phase 1 bootstrap for a deterministic complaint-triage codebase.
    make typecheck
    ```
 
+On Windows without `make`, run the underlying commands directly:
+```powershell
+uv run pytest -q
+uv run ruff check .
+uv run mypy src
+```
+
 ## Command Flow
 
 - `make run` - sanity check runtime config load
@@ -28,6 +35,10 @@ Phase 1 bootstrap for a deterministic complaint-triage codebase.
 - `make test` - execute unit tests
 - `make lint` - run Ruff checks
 - `make typecheck` - run mypy against `src/`
+
+Dataset build note:
+- `uv sync` installs the parquet dependencies (`pandas`, `pyarrow`) required by
+  `scripts/build_dataset.py` and `scripts/seed_vectordb.py`.
 
 ## Phase 1 Scope
 

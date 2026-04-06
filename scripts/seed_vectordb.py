@@ -32,7 +32,11 @@ def load_records(dataset_path: Path, limit: int = 5_000) -> list[dict[str, Any]]
     try:
         import pandas as pd
     except Exception as error:
-        raise RuntimeError('pandas + pyarrow are required to load parquet dataset') from error
+        raise RuntimeError(
+            'pandas + pyarrow are required to load the parquet dataset. '
+            'Run `uv sync` to install project dependencies, or `uv add pandas pyarrow` '
+            'if your environment was created before those packages were added.'
+        ) from error
 
     frame = pd.read_parquet(dataset_path)
     required = {'id', 'product', 'issue', 'state', 'date', 'narrative'}

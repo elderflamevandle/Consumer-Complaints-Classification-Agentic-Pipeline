@@ -11,6 +11,9 @@ Phase 1 data outputs are deterministic and tied to a fixed split contract.
 
 ## Rebuild Steps
 
+Dependency note:
+- `uv sync` installs `pandas` and `pyarrow`, which are required for parquet writes and reads.
+
 1. Build dataset sample and parquet outputs:
    - `uv run python scripts/build_dataset.py --input <cfpb_csv_path>`
 2. Seed local vector index from `dev.parquet`:

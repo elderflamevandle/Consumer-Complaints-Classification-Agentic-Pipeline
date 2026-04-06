@@ -184,7 +184,11 @@ def _write_parquet(records: list[dict[str, str]], output_path: Path) -> None:
     try:
         import pandas as pd
     except Exception as error:
-        raise RuntimeError('pandas + pyarrow are required to write parquet artifacts') from error
+        raise RuntimeError(
+            'pandas + pyarrow are required to write parquet artifacts. '
+            'Run `uv sync` to install project dependencies, or `uv add pandas pyarrow` '
+            'if your environment was created before those packages were added.'
+        ) from error
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(records).to_parquet(output_path, index=False)
