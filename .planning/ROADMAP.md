@@ -12,7 +12,7 @@ This roadmap converts the `plan2.md` architecture into a one-week executable seq
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Foundation and Runtime Baseline** - Project scaffold, data prep, and robust Groq client setup (Completed: 2026-04-05)
+- [x] **Phase 1: Foundation and Runtime Baseline** - Project scaffold, data prep, and robust Groq client setup (Completed: 2026-04-06)
 - [x] **Phase 2: Intake Intelligence and Classification Routing** - PII-safe intake plus confidence-aware classification (Completed: 2026-04-05)
 - [x] **Phase 3: Root Cause and MCP-Grounded Remediation** - RAG diagnosis and policy tool integration (completed 2026-04-05)
 - [x] **Phase 4: Response Generation with Compliance Audit Loop** - Drafting, self-correction cycle, and explainability chain (Completed: 2026-04-05)
@@ -30,12 +30,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 1. Team can run setup and execute one successful structured Groq call locally.
 2. Sample dataset and vector seed artifacts are reproducibly generated.
 3. Fallback chain behavior is verified for retry and model fallback paths.
-**Plans**: 3 plans
+**Plans**: 4/4 plans complete
 
 Plans:
 - [x] 01-01: Initialize project structure, environment files, and setup commands
 - [x] 01-02: Implement Groq client abstraction with fallback and token tracking
 - [x] 01-03: Build dataset sampling and offline vector seeding scripts
+- [x] 01-04: Add cross-platform task runner and PowerShell-safe operator command flow
 
 ### Phase 2: Intake Intelligence and Classification Routing
 **Goal**: Build safe intake processing and reliable first-step routing.
@@ -133,7 +134,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Runtime Baseline | 3/3 | Complete | 2026-04-05 |
+| 1. Foundation and Runtime Baseline | 4/4 | Complete   | 2026-04-06 |
 | 2. Intake Intelligence and Classification Routing | 3/3 | Complete | 2026-04-05 |
 | 3. Root Cause and MCP-Grounded Remediation | 3/3 | Complete    | 2026-04-05 |
 | 4. Response Generation with Compliance Audit Loop | 3/3 | Complete | 2026-04-05 |

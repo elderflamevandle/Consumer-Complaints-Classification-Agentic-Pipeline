@@ -1,9 +1,10 @@
 ---
-status: root_cause_found
+status: resolved
 phase: 01-foundation-and-runtime-baseline
 test: 2
 severity: blocker
 created: 2026-04-06T12:11:23.8158584-04:00
+updated: 2026-04-06T13:02:55.6344617-04:00
 ---
 
 # Windows Make Command Unavailable
@@ -37,3 +38,11 @@ The repository standardizes baseline operations behind a `Makefile`, but does no
 ## Suggested Fix Direction
 
 Introduce a first-class cross-platform task entrypoint, preferably a Python CLI or PowerShell-compatible wrapper, for `run`, `seed`, `eval`, `test`, `lint`, and `typecheck`. Update README to make that path primary, then keep the `Makefile` as an optional convenience on Unix-like shells.
+
+## Resolution
+
+Resolved by Phase 1 plan `01-04`:
+- Added [tasks.py](F:/Agentic_Hackathon/scripts/tasks.py) as the primary cross-platform task entrypoint.
+- Updated [README.md](F:/Agentic_Hackathon/README.md) so PowerShell-safe commands are the primary quickstart path.
+- Updated [Makefile](F:/Agentic_Hackathon/Makefile) to delegate to `scripts/tasks.py` instead of being the only operator surface.
+- Verified `uv run python scripts/tasks.py test`, `lint`, and `typecheck` all pass from the repo root.

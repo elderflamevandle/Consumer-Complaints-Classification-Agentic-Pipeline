@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 01-foundation-and-runtime-baseline
 source: 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md
 started: 2026-04-05T21:36:48-04:00
-updated: 2026-04-06T12:11:23.8158584-04:00
+updated: 2026-04-06T13:02:55.6344617-04:00
 ---
 
 ## Current Test
@@ -44,7 +44,7 @@ skipped: 0
 ## Gaps
 
 - truth: "Running `make lint` and `make typecheck` from the repo root should succeed using the documented baseline tooling, with no hidden prerequisites beyond the setup already described in the README."
-  status: failed
+  status: resolved
   reason: "User reported: make : The term 'make' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
   severity: blocker
   test: 2
@@ -60,4 +60,4 @@ skipped: 0
     - "Add a cross-platform task entrypoint for `run`, `seed`, `eval`, `test`, `lint`, and `typecheck` that does not require GNU Make."
     - "Update README quickstart to make the cross-platform command path primary and keep Makefile as an optional convenience."
     - "Add regression coverage or scripted verification for the new task entrypoint on Windows-compatible shells."
-  debug_session: ".planning/debug/windows-make-command-unavailable.md"
+  debug_session: ".planning/debug/resolved/windows-make-command-unavailable.md"

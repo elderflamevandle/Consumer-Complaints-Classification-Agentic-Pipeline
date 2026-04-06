@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed Phase 4 execution
-last_updated: "2026-04-05T21:14:24-04:00"
-last_activity: 2026-04-05 - Completed and verified Phase 4 response generation, audit loop, and explainability
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-04-06T17:01:54.951Z"
+last_activity: 2026-04-06 - Completed Phase 1 plan 01-04 cross-platform operator command gap closure
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 13
+  completed_plans: 13
   percent: 57
 ---
 
@@ -28,28 +28,28 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 Phase: 5 of 7 (Streamlit HITL Dashboard)
 Plan: 0 of 3 in current phase
 Status: Ready for phase-5 context and planning
-Last activity: 2026-04-05 - Completed and verified Phase 4 response generation, audit loop, and explainability
+Last activity: 2026-04-06 - Completed Phase 1 plan 01-04 cross-platform operator command gap closure
 
 Progress: [######----] 57%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 25 min
-- Total execution time: 5.1 hours
+- Total plans completed: 13
+- Average duration: 24 min
+- Total execution time: 5.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Foundation and Runtime Baseline | 3 | 127 min | 42 min |
+| 1. Foundation and Runtime Baseline | 4 | 133 min | 33 min |
 | 2. Intake Intelligence and Classification Routing | 3 | 97 min | 32 min |
 | 3. Root Cause and MCP-Grounded Remediation | 3 | 77 min | 26 min |
 | 4. Response Generation with Compliance Audit Loop | 3 | 4 min | 1 min |
 
 **Recent Trend:**
-- Last 3 plans: 04-01, 04-02, 04-03
+- Last 3 plans: 04-02, 04-03, 01-04
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -59,6 +59,7 @@ Progress: [######----] 57%
 | Phase 04 P01 | 1min | 3 tasks | 3 files |
 | Phase 04 P02 | 1min | 3 tasks | 5 files |
 | Phase 04 P03 | 2min | 3 tasks | 6 files |
+| Phase 01 P04 | 6min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Writer auto-fills policy citation labels from remediation data when model output omits them. - Keeps customer drafts and downstream audit checks deterministic even when model output drifts.
 - [Phase 04]: Auditor verdicts merge heuristic checks with model output and cap rewrites at two attempts before escalation. - Prevents permissive model passes and keeps the rewrite loop bounded for reviewability.
 - [Phase 04]: Explainer output is grounded in structured stage artifacts and bounded response-loop memory, not raw intake text. - Matches the executed pipeline and avoids widening the raw-text surface area in state or explanation output.
+- [Phase 01]: Standardized baseline operator commands behind scripts/tasks.py so Windows PowerShell and Unix shells share the same primary entrypoint.
+- [Phase 01]: Kept Makefile as a thin optional wrapper that delegates to the Python task runner to prevent command drift.
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T21:14:24-04:00
-Stopped at: Completed Phase 4 execution
-Resume file: .planning/phases/04-response-generation-with-compliance-audit-loop/04-VERIFICATION.md
+Last session: 2026-04-06T17:00:52.259Z
+Stopped at: Completed 01-04-PLAN.md
+Resume file: None
