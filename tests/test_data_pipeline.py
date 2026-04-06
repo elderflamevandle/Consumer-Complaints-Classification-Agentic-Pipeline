@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.build_dataset import apply_filters, split_sample, stratified_sample
+from scripts.build_dataset import _load_csv_records, apply_filters, split_sample, stratified_sample
 from scripts.seed_vectordb import EMBEDDING_MODEL_ID, handle_seed_failure
 from src.tools.vector_index import (
     compute_dataset_hash,
@@ -39,6 +39,28 @@ def test_sampling_split() -> None:
     assert len(dev) == 7_000
     assert len(holdout) == 2_000
     assert len(demos) == 1_000
+
+
+def test_load_csv_records_supports_official_cfpb_headers(tmp_path: Path) -> None:
+    csv_path = tmp_path / 'complaints.csv'
+    csv_path.write_text(
+        (
+            'Date received,Product,Issue,Consumer complaint narrative,State,Complaint ID\n'
+            '2025-01-01,Credit card,Billing,'
+            'This is a detailed complaint narrative for testing,CA,12345\n'
+        ),
+        encoding='utf-8',
+    )
+
+    records = _load_csv_records(csv_path)
+
+    assert len(records) == 1
+    assert records[0]['id'] == '12345'
+    assert records[0]['product'] == 'Credit card'
+    assert records[0]['issue'] == 'Billing'
+    assert records[0]['narrative'] == 'This is a detailed complaint narrative for testing'
+    assert records[0]['state'] == 'CA'
+    assert records[0]['date'] == '2025-01-01'
 
 
 def test_stale_detection(tmp_path: Path) -> None:

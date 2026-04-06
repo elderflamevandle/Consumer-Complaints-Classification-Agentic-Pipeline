@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import random
+import re
 from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
@@ -52,7 +53,12 @@ def _compute_quotas(
 ) -> dict[tuple[str, str], int]:
     total = sum(len(items) for items in groups.values())
     if total < target_size:
-        raise ValueError('Not enough records after filtering for requested sample size')
+        raise ValueError(
+            'Not enough records after filtering for requested sample size: '
+            f'need {target_size}, found {total}. '
+            'If you are using the official CFPB export, make sure the narrative column '
+            'is being read correctly.'
+        )
 
     floor_allocations: dict[tuple[str, str], int] = {}
     remainders: list[tuple[float, tuple[str, str]]] = []
@@ -135,21 +141,43 @@ def _load_csv_records(input_path: Path) -> list[dict[str, str]]:
     with input_path.open('r', encoding='utf-8', newline='') as handle:
         reader = csv.DictReader(handle)
         for row in reader:
+            normalized = _normalize_row_keys(row)
             records.append(
                 {
-                    'id': row.get('complaint_id') or row.get('id') or str(len(records)),
-                    'product': row.get('product') or '',
-                    'issue': row.get('issue') or '',
+                    'id': (
+                        normalized.get('complaint_id')
+                        or normalized.get('id')
+                        or str(len(records))
+                    ),
+                    'product': normalized.get('product') or '',
+                    'issue': normalized.get('issue') or '',
                     'narrative': (
-                        row.get('consumer_complaint_narrative')
-                        or row.get('narrative')
+                        normalized.get('consumer_complaint_narrative')
+                        or normalized.get('narrative')
                         or ''
                     ),
-                    'state': row.get('state') or '',
-                    'date': row.get('date_received') or row.get('date') or '',
+                    'state': normalized.get('state') or '',
+                    'date': normalized.get('date_received') or normalized.get('date') or '',
                 }
             )
     return records
+
+
+def _normalize_row_keys(row: dict[str | None, str | None]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in row.items():
+        if key is None:
+            continue
+        token = _normalize_header_name(key)
+        if token and token not in normalized:
+            normalized[token] = value or ''
+    return normalized
+
+
+def _normalize_header_name(name: str) -> str:
+    token = name.strip().lower()
+    token = re.sub(r'[^a-z0-9]+', '_', token)
+    return token.strip('_')
 
 
 def _write_parquet(records: list[dict[str, str]], output_path: Path) -> None:
