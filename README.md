@@ -13,28 +13,36 @@ Phase 1 bootstrap for a deterministic complaint-triage codebase.
    ```bash
    cp .env.example .env
    ```
-4. Run baseline checks:
+4. Run baseline checks with the cross-platform task runner:
    ```bash
-   make test
-   make lint
-   make typecheck
+   uv run python scripts/tasks.py test
+   uv run python scripts/tasks.py lint
+   uv run python scripts/tasks.py typecheck
    ```
 
-On Windows without `make`, run the underlying commands directly:
-```powershell
-uv run pytest -q
-uv run ruff check .
-uv run mypy src
+Optional Unix shorthand:
+```bash
+make test
+make lint
+make typecheck
 ```
 
 ## Command Flow
 
-- `make run` - sanity check runtime config load
-- `make seed` - build dataset artifacts and seed vector index
-- `make eval` - placeholder entrypoint for later evaluation phase
-- `make test` - execute unit tests
-- `make lint` - run Ruff checks
-- `make typecheck` - run mypy against `src/`
+- `uv run python scripts/tasks.py run` - sanity check runtime config load
+- `uv run python scripts/tasks.py seed` - build dataset artifacts and seed vector index
+- `uv run python scripts/tasks.py eval` - placeholder entrypoint for later evaluation phase
+- `uv run python scripts/tasks.py test` - execute unit tests
+- `uv run python scripts/tasks.py lint` - run Ruff checks
+- `uv run python scripts/tasks.py typecheck` - run mypy against `src/`
+
+Optional `make` convenience aliases for Unix-like shells:
+- `make run`
+- `make seed`
+- `make eval`
+- `make test`
+- `make lint`
+- `make typecheck`
 
 Dataset build note:
 - `uv sync` installs the parquet dependencies (`pandas`, `pyarrow`) required by
