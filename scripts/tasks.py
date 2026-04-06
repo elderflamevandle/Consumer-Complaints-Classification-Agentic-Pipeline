@@ -11,6 +11,10 @@ Command = tuple[str, ...]
 CommandGroup = tuple[Command, ...]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_READY_COMMAND = (
+    "from src.config import get_settings; "
+    "print('runtime ready:', get_settings().groq_base_url)"
+)
 
 TASK_COMMANDS: dict[str, CommandGroup] = {
     'run': (
@@ -19,7 +23,7 @@ TASK_COMMANDS: dict[str, CommandGroup] = {
             'run',
             'python',
             '-c',
-            "from src.config import get_settings; print('runtime ready:', get_settings().groq_base_url)",
+            RUNTIME_READY_COMMAND,
         ),
     ),
     'seed': (

@@ -6,6 +6,10 @@ import pytest
 from scripts import tasks
 
 EXPECTED_TASKS = ('run', 'seed', 'eval', 'test', 'lint', 'typecheck')
+RUNTIME_READY_COMMAND = (
+    "from src.config import get_settings; "
+    "print('runtime ready:', get_settings().groq_base_url)"
+)
 EXPECTED_COMMANDS = {
     'run': (
         (
@@ -13,7 +17,7 @@ EXPECTED_COMMANDS = {
             'run',
             'python',
             '-c',
-            "from src.config import get_settings; print('runtime ready:', get_settings().groq_base_url)",
+            RUNTIME_READY_COMMAND,
         ),
     ),
     'seed': (
@@ -41,7 +45,9 @@ def test_makefile_uses_task_runner(repo_root: Path) -> None:
 
 
 @pytest.mark.parametrize(('task_name', 'commands'), EXPECTED_COMMANDS.items())
-def test_task_runner_resolves_expected_commands(task_name: str, commands: tuple[tuple[str, ...], ...]) -> None:
+def test_task_runner_resolves_expected_commands(
+    task_name: str, commands: tuple[tuple[str, ...], ...]
+) -> None:
     assert tasks.get_task_commands(task_name) == commands
 
 
