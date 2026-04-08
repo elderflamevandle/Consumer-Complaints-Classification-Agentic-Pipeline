@@ -1,0 +1,32 @@
+[
+  {
+    "id": "demo-001-unauthorized-charge",
+    "title": "Unauthorized Credit Card Charge",
+    "summary": "Customer disputes a $347 charge they did not authorize, appearing on their statement twice.",
+    "complaint_text": "I noticed an unauthorized charge of $347.00 on my credit card statement dated March 15. I did not make this purchase and do not recognize the merchant 'TECHSTORE-ONLINE-247'. To make matters worse, the same charge appears twice on my statement. I have not shared my card details with anyone and my card has been in my possession the whole time. I need this charge reversed immediately and a new card issued. This is causing me significant financial stress as it has pushed me over my credit limit."
+  },
+  {
+    "id": "demo-002-mortgage-payment-misapplied",
+    "title": "Mortgage Payment Misapplied",
+    "summary": "Customer made extra principal payment but lender applied it to future months instead of principal.",
+    "complaint_text": "In February I sent an extra $2,000 payment toward my mortgage principal with a written note clearly stating 'apply to principal only'. Instead of reducing my principal balance, your company applied this payment to cover my next two monthly payments. This is not what I requested and it will cost me significantly more in interest over the life of the loan. I have called three times and been told it will be corrected but nothing has changed. My account number is 8834521 and the payment cleared on February 3rd. I want the payment properly applied to principal immediately and written confirmation that it has been done."
+  },
+  {
+    "id": "demo-003-student-loan-servicer-transfer",
+    "title": "Student Loan Servicer Transfer Error",
+    "summary": "Loan transferred to new servicer but payments are not being credited, resulting in late fees.",
+    "complaint_text": "My student loan was transferred from EduLoan Corp to your company effective January 1st. I have continued making my regular payments of $287 per month, but three of my payments have not been credited to my account. I now show as 90 days past due even though I have bank records proving all payments were made on time. Your customer service told me they could not find my transfer records. I have also been charged $45 in late fees. My original loan servicer reference number is ELC-7732891. This error is affecting my credit score and I need this resolved urgently before it causes further damage."
+  },
+  {
+    "id": "demo-004-checking-account-overdraft-fees",
+    "title": "Excessive Overdraft Fee Cascade",
+    "summary": "Bank charged multiple overdraft fees due to processing order, totaling $175 in one day.",
+    "complaint_text": "On April 2nd, my checking account had a balance of $43 when several transactions posted. Your bank processed the largest transaction first ($52 grocery purchase from April 1st) rather than the order they were received, which caused multiple smaller transactions to overdraft. As a result I was charged five overdraft fees of $35 each totaling $175 in a single day. If transactions had been processed in chronological order, only one transaction would have overdrafted. I have been a customer for 11 years with a clean record. I am requesting full refund of the four additional overdraft fees that resulted from your fee-maximizing processing order, and a clear explanation of your transaction processing policy."
+  },
+  {
+    "id": "demo-005-insurance-claim-wrongful-denial",
+    "title": "Auto Insurance Claim Wrongful Denial",
+    "summary": "Insurance company denied valid collision claim citing a policy exclusion that does not apply to the accident circumstances.",
+    "complaint_text": "On March 8th I was involved in a collision where another driver ran a red light and struck my vehicle. I filed a claim the same day (Claim #CLM-2024-88712). Two weeks later I received a denial letter stating my claim was rejected under the 'racing or speed contest' exclusion. This exclusion is completely inapplicable - this was a standard intersection collision caused by the other driver, and there is a police report confirming this. I have dashcam footage of the incident. The damage to my vehicle is $8,400 and I cannot afford repairs without the insurance payout I am entitled to. I need this denial reversed immediately and my claim processed correctly. I believe this denial was made without proper review of the evidence."
+  }
+]
