@@ -6,6 +6,8 @@ Provides a single operator workspace with:
 - Dedicated audit tab with chronological decision events (timestamp/decision/model)
 - Always-visible daily token-budget header widget
 - Final customer response and explainer artifacts after a completed run
+- Sticky HITL review panel with inline approve, edit, and reject actions
+- Auto-resume same-thread continuation after reviewer submission
 
 All pipeline execution flows through the same composer-submit path via the
 run_complaint() runtime facade in src/ui/runtime.py.
@@ -154,6 +156,107 @@ def _render_composer(state: DashboardState) -> str:
         st.rerun()
 
     return submitted_text
+
+
+# ---------------------------------------------------------------------------
+# Sticky HITL review panel
+# ---------------------------------------------------------------------------
+def _render_review_panel(state: DashboardState) -> None:
+    """Render the sticky review panel when a run is paused for human action.
+
+    Displays complaint summary, interrupt reason, and current stage output
+    next to inline approve, edit, and reject controls. Submitting an action
+    auto-resumes the same thread and shows explicit status feedback.
+
+    Args:
+        state: Current DashboardState with pending_review set.
+    """
+    from src.ui.review import apply_reviewer_action_from_ui, build_post_action_banner
+
+    review = state.pending_review
+    if review is None:
+        return
+
+    st.divider()
+    st.subheader("Human Review Required")
+    st.info(
+        f"Pipeline paused on thread `{review.thread_id}`. "
+        "Review the context below and select an action."
+    )
+
+    col_context, col_actions = st.columns([3, 2])
+
+    with col_context:
+        st.markdown("**Complaint Summary**")
+        st.text(review.complaint_summary)
+
+        st.markdown("**Interrupt Reason**")
+        st.text(review.interrupt_reason)
+
+        st.markdown("**Current Stage Output**")
+        for key, val in review.stage_output.items():
+            st.text(f"{key}: {val}")
+
+    with col_actions:
+        st.markdown("**Reviewer Actions**")
+        st.caption("Select one action to resume or close the pipeline.")
+
+        # Approve
+        if "approve" in review.allowed_actions:
+            if st.button("Approve", key="review_approve", type="primary"):
+                _dispatch_review_action(state, "approve", draft_text=None)
+                st.rerun()
+
+        # Edit with inline text input
+        if "edit" in review.allowed_actions:
+            draft = st.text_input(
+                "Edit (enter updated classification or note):",
+                value=review.draft_edit_text or "",
+                key="review_edit_draft",
+                placeholder="e.g. billing, credit_card, low risk",
+            )
+            if st.button("Submit Edit", key="review_edit_submit"):
+                _dispatch_review_action(state, "edit", draft_text=draft or None)
+                st.rerun()
+
+        # Reject
+        if "reject" in review.allowed_actions:
+            if st.button("Reject", key="review_reject"):
+                _dispatch_review_action(state, "reject", draft_text=None)
+                st.rerun()
+
+
+def _dispatch_review_action(
+    state: DashboardState,
+    action: str,
+    draft_text: str | None,
+) -> None:
+    """Dispatch a reviewer action, update state, and set post-action banner.
+
+    Args:
+        state: DashboardState carrying the pending_review context.
+        action: One of "approve", "edit", "reject".
+        draft_text: Inline edit text for edit actions; None otherwise.
+    """
+    from src.ui.review import apply_reviewer_action_from_ui, build_post_action_banner
+    from unittest.mock import MagicMock
+
+    review = state.pending_review
+    if review is None:
+        return
+
+    # Build a minimal routing-state proxy for the adapter (UI layer stays simple)
+    routing_proxy = MagicMock()
+    routing_proxy.thread_id = review.thread_id
+
+    result = apply_reviewer_action_from_ui(
+        routing_state=routing_proxy,
+        action=action,
+        draft_text=draft_text,
+    )
+
+    banner = build_post_action_banner(action, thread_id=result.thread_id)
+    state.clear_review(banner=banner)
 
 
 # ---------------------------------------------------------------------------
@@ -308,8 +411,12 @@ def _run_pipeline(complaint_text: str, state: DashboardState) -> None:
 
     This is called from the main render loop when the operator submits a complaint.
     Uses the runtime facade in src/ui/runtime for the shared submit path.
+    Clears any prior review state before starting a new run.
     """
     from src.ui.runtime import run_complaint, reset_shared_budget
+
+    # Clear previous review panel and banner for a fresh run
+    state.clear_for_new_run()
 
     with st.spinner("Running complaint pipeline..."):
         try:
@@ -344,6 +451,14 @@ def main() -> None:
         "Load a curated demo or enter a complaint manually below."
     )
     st.divider()
+
+    # --- Post-action review banner (shown after approve/edit/reject) ---
+    if state.review_banner:
+        st.success(state.review_banner)
+
+    # --- Sticky review panel (shown when pipeline is paused for HITL) ---
+    if state.pending_review is not None:
+        _render_review_panel(state)
 
     # --- Scenario cards ---
     _render_scenario_cards(demos)
