@@ -5,7 +5,7 @@ import pytest
 
 from scripts import tasks
 
-EXPECTED_TASKS = ('run', 'seed', 'eval', 'test', 'lint', 'typecheck')
+EXPECTED_TASKS = ('run', 'dashboard', 'seed', 'eval', 'test', 'lint', 'typecheck')
 RUNTIME_READY_COMMAND = (
     "from src.config import get_settings; "
     "print('runtime ready:', get_settings().groq_base_url)"

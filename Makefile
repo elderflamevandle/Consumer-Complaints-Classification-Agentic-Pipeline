@@ -1,7 +1,10 @@
-.PHONY: run seed eval test lint typecheck
+.PHONY: run dashboard seed eval test lint typecheck
 
 run:
 	uv run python scripts/tasks.py run
+
+dashboard:
+	uv run python scripts/tasks.py dashboard
 
 seed:
 	uv run python scripts/tasks.py seed
