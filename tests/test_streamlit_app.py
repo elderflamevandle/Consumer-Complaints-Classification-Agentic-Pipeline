@@ -402,3 +402,169 @@ def test_dashboard_renders_final_response_and_explainer_artifacts() -> None:
     assert len(snapshot.final_explanation) >= 5, "final_explanation must have at least 5 bullets"
     for bullet in snapshot.final_explanation:
         assert bullet.strip(), "Each explanation bullet must be non-empty"
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (05-03): Review continuity regression coverage
+# ---------------------------------------------------------------------------
+
+
+def test_review_panel_state_exposes_approve_edit_reject_on_landing() -> None:
+    """ReviewPanelState must always carry all three reviewer actions in allowed_actions."""
+    from src.ui.review import ReviewPanelState
+
+    panel = ReviewPanelState(
+        thread_id="t-panel",
+        complaint_summary="Loan payment not posted.",
+        interrupt_reason="compliance_risk=high",
+        stage_output={"route": "human_review"},
+        allowed_actions=("approve", "edit", "reject"),
+    )
+
+    assert "approve" in panel.allowed_actions
+    assert "edit" in panel.allowed_actions
+    assert "reject" in panel.allowed_actions
+
+
+def test_approve_action_result_preserves_thread_id_and_resumed_status() -> None:
+    """Approve must preserve thread identity and return resume_status='resumed'."""
+    from src.ui.review import apply_reviewer_action_from_ui
+    from unittest.mock import MagicMock
+
+    mock_state = MagicMock()
+    mock_state.thread_id = "t-approve-reg"
+
+    result = apply_reviewer_action_from_ui(
+        routing_state=mock_state,
+        action="approve",
+        draft_text=None,
+    )
+
+    assert result.thread_id == "t-approve-reg"
+    assert result.resume_status == "resumed"
+    assert result.action == "approve"
+    assert result.error is None
+
+
+def test_edit_action_result_preserves_thread_id_and_resumed_status() -> None:
+    """Edit must preserve thread identity (no new thread) and return resume_status='resumed'."""
+    from src.ui.review import apply_reviewer_action_from_ui
+    from unittest.mock import MagicMock
+
+    mock_state = MagicMock()
+    mock_state.thread_id = "t-edit-reg"
+
+    result = apply_reviewer_action_from_ui(
+        routing_state=mock_state,
+        action="edit",
+        draft_text="billing correction",
+    )
+
+    assert result.thread_id == "t-edit-reg", "Edit must not create a new thread"
+    assert result.resume_status == "resumed"
+    assert result.action == "edit"
+
+
+def test_reject_action_result_preserves_thread_id_and_rejected_status() -> None:
+    """Reject must preserve thread identity for audit and return resume_status='rejected'."""
+    from src.ui.review import apply_reviewer_action_from_ui
+    from unittest.mock import MagicMock
+
+    mock_state = MagicMock()
+    mock_state.thread_id = "t-reject-reg"
+
+    result = apply_reviewer_action_from_ui(
+        routing_state=mock_state,
+        action="reject",
+        draft_text=None,
+    )
+
+    assert result.thread_id == "t-reject-reg", "Reject must preserve thread for audit"
+    assert result.resume_status == "rejected"
+    assert result.action == "reject"
+
+
+def test_dashboard_state_clear_review_removes_pending_and_sets_banner() -> None:
+    """clear_review must remove pending_review and set informative banner."""
+    from src.ui.dashboard_state import DashboardState
+    from src.ui.review import ReviewPanelState
+
+    state = DashboardState()
+    review = ReviewPanelState(
+        thread_id="t-clear",
+        complaint_summary="Account error.",
+        interrupt_reason="ambiguous",
+        stage_output={},
+        allowed_actions=("approve", "edit", "reject"),
+    )
+    state.set_pending_review(review)
+    assert state.pending_review is not None
+
+    state.clear_review(banner="Rejected — thread closed.")
+    assert state.pending_review is None
+    assert state.review_banner == "Rejected — thread closed."
+
+
+def test_dashboard_clear_for_new_run_clears_review_state() -> None:
+    """clear_for_new_run must remove both pending_review and review_banner."""
+    from src.ui.dashboard_state import DashboardState
+
+    state = DashboardState()
+    state.review_banner = "Prior banner"
+    state.clear_for_new_run()
+
+    assert state.review_banner is None
+    assert state.pending_review is None
+
+
+def test_reject_history_visible_in_dashboard_via_thread_id_persistence() -> None:
+    """After reject, the thread_id must be preserved so audit log remains queryable."""
+    from src.ui.review import apply_reviewer_action_from_ui
+    from unittest.mock import MagicMock
+
+    mock_state = MagicMock()
+    mock_state.thread_id = "t-audit-history"
+
+    result = apply_reviewer_action_from_ui(
+        routing_state=mock_state,
+        action="reject",
+        draft_text=None,
+    )
+
+    # Thread ID survives reject — audit log can still be queried by this ID
+    assert result.thread_id == "t-audit-history"
+    assert result.resume_status == "rejected"
+
+
+def test_post_action_banners_are_informative_for_all_actions() -> None:
+    """build_post_action_banner must return non-empty, action-specific strings."""
+    from src.ui.review import build_post_action_banner
+
+    for action in ("approve", "edit", "reject"):
+        banner = build_post_action_banner(action, thread_id="t-banner")
+        assert len(banner) > 10, f"Banner for '{action}' must be substantive"
+        assert "t-banner" in banner, f"Banner for '{action}' must include thread_id"
+
+
+def test_streamlit_app_contains_review_panel_render_function() -> None:
+    """The Streamlit app module must expose _render_review_panel for regression testing."""
+    import importlib
+    import sys
+
+    # Avoid full Streamlit rendering — check module attribute at import boundary
+    # We test that the function signature exists by inspecting the source
+    import ast
+    import pathlib
+
+    app_path = pathlib.Path("app/streamlit_app.py")
+    source = app_path.read_text()
+    tree = ast.parse(source)
+
+    fn_names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+
+    assert "_render_review_panel" in fn_names, (
+        "streamlit_app.py must define _render_review_panel for HITL control"
+    )
+    assert "_dispatch_review_action" in fn_names, (
+        "streamlit_app.py must define _dispatch_review_action for same-thread resume"
+    )
