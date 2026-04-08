@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **DATA-01**: Team can download and sample CFPB complaints into a reproducible 10K narrative dataset.
 - [x] **DATA-02**: System can precompute embeddings for a 5K complaint subset using `all-MiniLM-L6-v2` via offline batch script.
-- [ ] **DATA-03**: System includes five curated golden demo complaints that can be loaded on demand.
+- [x] **DATA-03**: System includes five curated golden demo complaints that can be loaded on demand.
 - [x] **DATA-04**: Intake pipeline can append extracted text from mock receipt documents before classification.
 
 ### Pipeline and State
@@ -34,7 +34,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### User Interface
 
-- [ ] **UI-01**: Streamlit app accepts raw complaint input and golden demo selection.
+- [x] **UI-01**: Streamlit app accepts raw complaint input and golden demo selection.
 - [ ] **UI-02**: UI displays pipeline stage status including model used, token usage, and latency.
 - [ ] **UI-03**: Human reviewer can approve, edit, or reject remediation and resume same graph thread.
 - [ ] **UI-04**: Audit tab shows ordered decision events with timestamps and model versions.
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGT-06 | Phase 4 | Complete (2026-04-05) |
 | AGT-07 | Phase 4 | Complete (2026-04-05) |
 | FLOW-03 | Phase 4 | Complete (2026-04-05) |
-| DATA-03 | Phase 5 | Pending |
-| UI-01 | Phase 5 | Pending |
+| DATA-03 | Phase 5 | Complete |
+| UI-01 | Phase 5 | Complete |
 | UI-02 | Phase 5 | Pending |
 | UI-03 | Phase 5 | Pending |
 | UI-04 | Phase 5 | Pending |
