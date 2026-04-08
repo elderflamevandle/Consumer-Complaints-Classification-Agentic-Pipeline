@@ -36,7 +36,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **UI-01**: Streamlit app accepts raw complaint input and golden demo selection.
 - [x] **UI-02**: UI displays pipeline stage status including model used, token usage, and latency.
-- [ ] **UI-03**: Human reviewer can approve, edit, or reject remediation and resume same graph thread.
+- [x] **UI-03**: Human reviewer can approve, edit, or reject remediation and resume same graph thread.
 - [x] **UI-04**: Audit tab shows ordered decision events with timestamps and model versions.
 - [x] **UI-05**: Token budget widget shows daily free-tier usage status.
 
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 5 | Complete |
 | UI-01 | Phase 5 | Complete |
 | UI-02 | Phase 5 | Complete |
-| UI-03 | Phase 5 | Pending |
+| UI-03 | Phase 5 | Complete |
 | UI-04 | Phase 5 | Complete |
 | UI-05 | Phase 5 | Complete |
 | FLOW-04 | Phase 6 | Pending |
