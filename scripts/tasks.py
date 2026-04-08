@@ -26,6 +26,9 @@ TASK_COMMANDS: dict[str, CommandGroup] = {
             RUNTIME_READY_COMMAND,
         ),
     ),
+    'dashboard': (
+        ('uv', 'run', 'streamlit', 'run', 'app/streamlit_app.py'),
+    ),
     'seed': (
         ('uv', 'run', 'python', 'scripts/build_dataset.py'),
         ('uv', 'run', 'python', 'scripts/seed_vectordb.py'),
