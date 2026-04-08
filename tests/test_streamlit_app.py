@@ -114,3 +114,73 @@ def test_page_title_or_header_is_visible() -> None:
 
     has_title = len(at.title) > 0 or len(at.header) > 0 or len(at.subheader) > 0
     assert has_title, "App must display a page title, header, or subheader"
+
+
+def test_five_demo_load_buttons_present_on_landing() -> None:
+    """Exactly five golden demo Load buttons should appear as scenario card actions."""
+    at = _get_app()
+    at.run()
+
+    # Demo load buttons are keyed as load_{demo_id}; find them by counting total buttons
+    # We have 5 Load buttons + Run Pipeline + Clear = 7 total
+    # At minimum 5 demo buttons must be present
+    demo_buttons = [b for b in at.button if str(b.key).startswith("load_")]
+    assert len(demo_buttons) == 5, (
+        f"Expected 5 demo Load buttons (one per golden demo), found {len(demo_buttons)}"
+    )
+
+
+def test_loading_second_demo_populates_composer() -> None:
+    """Clicking the second demo button should populate the composer with that demo's text."""
+    from src.ui.demo_cases import load_golden_demos
+
+    demos = load_golden_demos()
+    target_demo = demos[1]
+
+    at = _get_app()
+    at.run()
+
+    # Find and click the second demo's load button
+    target_button = None
+    for btn in at.button:
+        if str(btn.key) == f"load_{target_demo['id']}":
+            target_button = btn
+            break
+
+    assert target_button is not None, f"Button for demo '{target_demo['id']}' not found"
+    target_button.click().run()
+
+    assert not at.exception, f"Exception after loading second demo: {at.exception}"
+
+    composer = at.text_area[0]
+    assert len(composer.value) > 0, "Composer should be populated after loading second demo"
+
+
+def test_composer_accepts_manual_text_input() -> None:
+    """The complaint text area should accept direct manual text input."""
+    at = _get_app()
+    at.run()
+
+    manual_complaint = "I have a complaint about my account statement being incorrect."
+    at.text_area[0].set_value(manual_complaint).run()
+
+    assert not at.exception, f"Exception after typing manual complaint: {at.exception}"
+    assert at.text_area[0].value == manual_complaint, (
+        "Composer should reflect manually typed text"
+    )
+
+
+def test_app_shell_is_exercisable_without_browser() -> None:
+    """The Streamlit app shell must be fully exercisable via AppTest (no browser required)."""
+    at = _get_app()
+    at.run()
+
+    # Full exercise: load a demo, verify composer populates, check no exception
+    assert not at.exception, f"App raised exception on initial load: {at.exception}"
+    assert len(at.text_area) >= 1, "Composer must be present"
+    assert len(at.button) >= 5, "Demo cards must be present"
+
+    # Click first demo
+    at.button[0].click().run()
+    assert not at.exception, f"App raised exception after demo click: {at.exception}"
+    assert len(at.text_area[0].value) > 0, "Composer populated after demo load"

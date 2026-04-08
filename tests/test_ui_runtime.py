@@ -75,3 +75,70 @@ def test_demo_cases_load_from_golden_demos_json() -> None:
 
     assert isinstance(raw, list), "golden_demos.json must be a JSON array"
     assert len(raw) == 5, f"golden_demos.json must contain exactly 5 entries, got {len(raw)}"
+
+
+def test_get_demo_by_id_returns_correct_record() -> None:
+    """get_demo_by_id should return the correct demo for a known ID, None for unknown."""
+    from src.ui.demo_cases import get_demo_by_id, load_golden_demos
+
+    demos = load_golden_demos()
+    first_id = demos[0]["id"]
+
+    found = get_demo_by_id(first_id)
+    assert found is not None, f"get_demo_by_id should find demo with id '{first_id}'"
+    assert found["id"] == first_id
+
+    missing = get_demo_by_id("nonexistent-demo-id")
+    assert missing is None, "get_demo_by_id should return None for unknown ID"
+
+
+def test_dashboard_state_load_demo_sets_fields() -> None:
+    """load_demo should populate both complaint_text and selected_demo."""
+    from src.ui.dashboard_state import DashboardState
+
+    state = DashboardState()
+    state.load_demo(demo_id="demo-001", complaint_text="Test complaint for demo")
+
+    assert state.selected_demo == "demo-001"
+    assert state.complaint_text == "Test complaint for demo"
+
+
+def test_dashboard_state_clear_composer_resets_fields() -> None:
+    """clear_composer should blank the composer and clear selected_demo."""
+    from src.ui.dashboard_state import DashboardState
+
+    state = DashboardState()
+    state.load_demo(demo_id="demo-001", complaint_text="Some demo text")
+    state.clear_composer()
+
+    assert state.complaint_text == ""
+    assert state.selected_demo is None
+
+
+def test_demo_complaint_texts_are_substantive() -> None:
+    """Each demo complaint_text should be longer than 100 characters for realism."""
+    from src.ui.demo_cases import load_golden_demos
+
+    demos = load_golden_demos()
+    for demo in demos:
+        assert len(demo["complaint_text"]) > 100, (
+            f"Demo '{demo['id']}' complaint_text is too short ({len(demo['complaint_text'])} chars); "
+            "demo complaints must be realistic and substantive."
+        )
+
+
+def test_demo_catalog_covers_distinct_complaint_categories() -> None:
+    """Five golden demos should cover meaningfully distinct complaint scenarios."""
+    from src.ui.demo_cases import load_golden_demos
+
+    demos = load_golden_demos()
+    titles = [d["title"].lower() for d in demos]
+
+    # All titles should be distinct
+    assert len(titles) == len(set(titles)), "Demo titles must be distinct"
+
+    # Each demo should be recognisably different from the others
+    for i, title in enumerate(titles):
+        for j, other_title in enumerate(titles):
+            if i != j:
+                assert title != other_title
