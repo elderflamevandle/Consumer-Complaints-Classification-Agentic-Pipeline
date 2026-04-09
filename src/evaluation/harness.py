@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Protocol, Sequence
+from typing import TYPE_CHECKING, Callable, Protocol, Sequence
 
 from src.agents.classifier import ClassifierAgent
 from src.evaluation.taxonomy import normalize
 from src.schemas.classification import ClassificationResult, IssueType, ProductType
+
+if TYPE_CHECKING:
+    from src.evaluation.fairness import FairnessReport
 
 REQUIRED_COLUMNS = ('id', 'product', 'issue', 'narrative', 'state', 'date')
 
@@ -75,6 +78,7 @@ class EvaluationSummary:
     issue_breakdown: tuple[LabelMetrics, ...]
     sampled_failures: tuple[EvaluationRow, ...]
     rows: tuple[EvaluationRow, ...]
+    fairness: FairnessReport | None = None
     warnings: tuple[str, ...] = ()
 
 
@@ -116,7 +120,10 @@ def evaluate_holdout(
     dataset_path: Path,
     classifier: SupportsClassify | None = None,
     sample_failures: int = 5,
+    fairness_min_support: int = 50,
 ) -> EvaluationSummary:
+    from src.evaluation.fairness import build_fairness_report
+
     examples = load_holdout_examples(dataset_path)
     active_classifier = classifier or ClassifierAgent()
 
@@ -133,6 +140,7 @@ def evaluate_holdout(
         truth_getter=lambda row: row.truth_issue_type.value,
         prediction_getter=lambda row: row.predicted_issue_type.value,
     )
+    fairness = build_fairness_report(rows, min_support=fairness_min_support)
 
     return EvaluationSummary(
         dataset_path=dataset_path,
@@ -146,6 +154,8 @@ def evaluate_holdout(
         issue_breakdown=issue_breakdown,
         sampled_failures=_sample_failures(rows, sample_failures=max(sample_failures, 0)),
         rows=rows,
+        fairness=fairness,
+        warnings=tuple(fairness.warnings),
     )
 
 
@@ -252,4 +262,3 @@ def _safe_divide(numerator: int, denominator: int) -> float:
 
 def _round(value: float) -> float:
     return round(value, 4)
-

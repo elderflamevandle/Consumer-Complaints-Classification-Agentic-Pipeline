@@ -78,6 +78,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f'Records: {summary.record_count}')
     print(f'Macro F1: {summary.macro_f1:.4f}')
     print(f'Exact match rate: {summary.exact_match_rate:.4f}')
+    if summary.fairness:
+        print(
+            'Fairness baseline: '
+            f'{summary.fairness.baseline_group} ({summary.fairness.baseline_support} rows)'
+        )
+        print(f'Fairness comparisons: {len(summary.fairness.comparisons)}')
+        for warning in summary.fairness.warnings:
+            print(f'Fairness warning: {warning}')
     print(f'JSON: {artifacts.json_path.as_posix()}')
     print(f'Markdown: {artifacts.markdown_path.as_posix()}')
     return 0

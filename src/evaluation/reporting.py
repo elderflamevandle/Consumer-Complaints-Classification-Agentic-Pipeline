@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.evaluation.fairness import FairnessComparison, FairnessReport, SkippedGroup
 from src.evaluation.harness import EvaluationRow, EvaluationSummary, LabelMetrics
 
 DEFAULT_OUTPUT_DIR = Path('artifacts/eval')
@@ -34,6 +35,7 @@ def evaluation_to_dict(summary: EvaluationSummary) -> dict[str, object]:
         'product_breakdown': [_metric_to_dict(metric) for metric in summary.product_breakdown],
         'issue_breakdown': [_metric_to_dict(metric) for metric in summary.issue_breakdown],
         'sampled_failures': [_failure_to_dict(row) for row in summary.sampled_failures],
+        'fairness': _fairness_to_dict(summary.fairness) if summary.fairness else None,
     }
 
 
@@ -65,6 +67,9 @@ def render_markdown_report(summary: EvaluationSummary) -> str:
 
     _append_breakdown(lines, title='Product Breakdown', metrics=summary.product_breakdown)
     _append_breakdown(lines, title='Issue Breakdown', metrics=summary.issue_breakdown)
+
+    if summary.fairness:
+        _append_fairness(lines, summary.fairness)
 
     lines.extend(['## Sampled Failures', ''])
     if not summary.sampled_failures:
@@ -136,6 +141,46 @@ def _append_breakdown(
 
 
 
+def _append_fairness(lines: list[str], report: FairnessReport) -> None:
+    lines.extend(
+        [
+            '## Fairness',
+            '',
+            (
+                f'- Baseline: `{report.baseline_group}` '
+                f'({report.baseline_support} rows, '
+                f'exact match {report.baseline_exact_match_rate:.4f})'
+            ),
+            f'- Minimum Support: `{report.min_support}`',
+            '',
+        ]
+    )
+
+    if report.comparisons:
+        lines.extend(
+            [
+                '| Group | Support | Exact Match Rate | Disparity Ratio vs Baseline |',
+                '| --- | ---: | ---: | ---: |',
+            ]
+        )
+        for comparison in report.comparisons:
+            lines.append(
+                '| '
+                f'{comparison.group} | {comparison.support} | '
+                f'{comparison.exact_match_rate:.4f} | {comparison.disparity_ratio:.4f} |'
+            )
+        lines.append('')
+    else:
+        lines.extend(['No supported fairness comparisons.', ''])
+
+    if report.skipped_groups:
+        lines.extend(['### Skipped Groups', ''])
+        for skipped in report.skipped_groups:
+            lines.append(f'- {skipped.group}: {skipped.reason}')
+        lines.append('')
+
+
+
 def _metric_to_dict(metric: LabelMetrics) -> dict[str, object]:
     return {
         'label': metric.label,
@@ -167,4 +212,40 @@ def _failure_to_dict(row: EvaluationRow) -> dict[str, object]:
         'product_correct': row.product_correct,
         'issue_correct': row.issue_correct,
         'exact_match': row.exact_match,
+    }
+
+
+
+def _fairness_to_dict(report: FairnessReport) -> dict[str, object]:
+    return {
+        'baseline_group': report.baseline_group,
+        'baseline_support': report.baseline_support,
+        'baseline_exact_match_rate': report.baseline_exact_match_rate,
+        'min_support': report.min_support,
+        'selected_groups': list(report.selected_groups),
+        'comparisons': [_comparison_to_dict(item) for item in report.comparisons],
+        'skipped_groups': [_skipped_group_to_dict(item) for item in report.skipped_groups],
+        'warnings': list(report.warnings),
+    }
+
+
+
+def _comparison_to_dict(item: FairnessComparison) -> dict[str, object]:
+    return {
+        'group': item.group,
+        'support': item.support,
+        'exact_match_rate': item.exact_match_rate,
+        'baseline_group': item.baseline_group,
+        'baseline_support': item.baseline_support,
+        'baseline_exact_match_rate': item.baseline_exact_match_rate,
+        'disparity_ratio': item.disparity_ratio,
+    }
+
+
+
+def _skipped_group_to_dict(item: SkippedGroup) -> dict[str, object]:
+    return {
+        'group': item.group,
+        'support': item.support,
+        'reason': item.reason,
     }
