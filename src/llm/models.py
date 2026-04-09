@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Final
 
-PRIMARY_MODEL: Final[str] = 'llama-3.3-70b-versatile'
-SECONDARY_MODEL: Final[str] = 'mixtral-8x7b-32768'
-TERTIARY_MODEL: Final[str] = 'llama-3.1-8b-instant'
+PRIMARY_MODEL: Final[str] = "llama-3.3-70b-versatile"
+SECONDARY_MODEL: Final[str] = "qwen/qwen3-32b"
+TERTIARY_MODEL: Final[str] = "llama-3.1-8b-instant"
 
 FALLBACK_CHAIN: Final[tuple[str, str, str]] = (
     PRIMARY_MODEL,
@@ -15,13 +15,13 @@ FALLBACK_CHAIN: Final[tuple[str, str, str]] = (
 )
 
 AGENT_MODELS: Final[dict[str, str]] = {
-    'classifier': PRIMARY_MODEL,
-    'root_cause': PRIMARY_MODEL,
-    'remediator': PRIMARY_MODEL,
-    'writer': PRIMARY_MODEL,
-    'auditor': PRIMARY_MODEL,
-    'explainer': PRIMARY_MODEL,
-    'default': PRIMARY_MODEL,
+    'classifier': "llama-3.3-70b-versatile",
+    'root_cause': "qwen/qwen3-32b",
+    'remediator': "qwen/qwen3-32b",
+    'writer':     "llama-3.3-70b-versatile",
+    'auditor':    "qwen/qwen3-32b",
+    'explainer':  "llama-3.3-70b-versatile",
+    'default':    "llama-3.1-8b-instant",
 }
 
 

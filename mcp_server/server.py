@@ -13,6 +13,15 @@ TOOL_GET_SLA = 'get_sla_requirements'
 TOOL_LIST = 'list_tools'
 REQUIRED_POLICY_FIELDS = ('sla_window', 'required_actions', 'regulatory_basis')
 DEFAULT_REGULATIONS_PATH = Path(__file__).with_name('mock_regulations.json')
+FALLBACK_POLICY: dict[str, Any] = {
+    'sla_window': '30 calendar days',
+    'required_actions': [
+        'Acknowledge complaint receipt',
+        'Open internal case and assign owner',
+        'Provide written resolution summary',
+    ],
+    'regulatory_basis': 'CFPB complaint response baseline guidance',
+}
 
 
 def _normalize_issue(issue_type: str) -> str:
@@ -51,16 +60,54 @@ def get_sla_requirements(
     regulations_path: Path = DEFAULT_REGULATIONS_PATH,
 ) -> dict[str, Any]:
     regulations = _load_regulations(regulations_path)
-    default_policy = regulations.get('default')
-    if not isinstance(default_policy, dict):
-        raise ValueError('Regulations default policy is invalid')
-
     issue_key = _normalize_issue(issue_type)
     state_key = state_code.strip().upper()
+    selected = _select_policy(regulations=regulations, issue_key=issue_key, state_key=state_key)
+    policy = _validate_policy_fields(dict(selected))
+    return {
+        'issue_type': issue_key,
+        'state_code': state_key,
+        'sla_window': str(policy['sla_window']),
+        'required_actions': [str(item) for item in policy['required_actions']],
+        'regulatory_basis': str(policy['regulatory_basis']),
+    }
 
-    issue_policy = regulations.get('issues', {})
+
+def _select_policy(*, regulations: dict[str, Any], issue_key: str, state_key: str) -> dict[str, Any]:
+    # Legacy shape: {default, issues:{ISSUE:{default,states:{CA:{...}}}}}
+    default_policy = regulations.get('default')
+    issue_policy = regulations.get('issues')
+    if isinstance(default_policy, dict) and isinstance(issue_policy, dict):
+        selected = _select_legacy_policy(
+            issue_policy=issue_policy,
+            issue_key=issue_key,
+            state_key=state_key,
+        )
+        if isinstance(selected, dict):
+            return selected
+        return dict(default_policy)
+
+    # Generated norms shape from mcp_policy_lab:
+    # {issue_norms, state_defaults, state_overrides}
+    generated = _select_generated_policy(
+        regulations=regulations,
+        issue_key=issue_key,
+        state_key=state_key,
+    )
+    if isinstance(generated, dict):
+        return generated
+
+    # Hard fallback if file is malformed/incomplete.
+    return dict(FALLBACK_POLICY)
+
+
+def _select_legacy_policy(
+    *,
+    issue_policy: dict[str, Any],
+    issue_key: str,
+    state_key: str,
+) -> dict[str, Any] | None:
     issue_block = issue_policy.get(issue_key, {}) if isinstance(issue_policy, dict) else {}
-
     selected: dict[str, Any] | None = None
     if isinstance(issue_block, dict):
         states = issue_block.get('states')
@@ -73,18 +120,44 @@ def get_sla_requirements(
             issue_default = issue_block.get('default')
             if isinstance(issue_default, dict):
                 selected = issue_default
+    return selected
 
-    if selected is None:
-        selected = default_policy
 
-    policy = _validate_policy_fields(dict(selected))
-    return {
-        'issue_type': issue_key,
-        'state_code': state_key,
-        'sla_window': str(policy['sla_window']),
-        'required_actions': [str(item) for item in policy['required_actions']],
-        'regulatory_basis': str(policy['regulatory_basis']),
-    }
+def _select_generated_policy(
+    *,
+    regulations: dict[str, Any],
+    issue_key: str,
+    state_key: str,
+) -> dict[str, Any] | None:
+    issue_norms = regulations.get('issue_norms')
+    state_defaults = regulations.get('state_defaults')
+    state_overrides = regulations.get('state_overrides')
+
+    if not isinstance(issue_norms, dict):
+        return None
+
+    base = issue_norms.get(issue_key)
+    selected: dict[str, Any] = dict(base) if isinstance(base, dict) else {}
+
+    # If issue key missing, use state-level default before global fallback.
+    if not selected and isinstance(state_defaults, dict):
+        state_default = state_defaults.get(state_key)
+        if isinstance(state_default, dict):
+            selected = dict(state_default)
+
+    if isinstance(state_overrides, dict):
+        state_block = state_overrides.get(state_key)
+        if isinstance(state_block, dict):
+            default_override = state_block.get('default')
+            if isinstance(default_override, dict):
+                selected.update(default_override)
+            issue_block = state_block.get('issues')
+            if isinstance(issue_block, dict):
+                issue_override = issue_block.get(issue_key)
+                if isinstance(issue_override, dict):
+                    selected.update(issue_override)
+
+    return selected or None
 
 
 def handle_request(payload: dict[str, Any]) -> dict[str, Any]:
@@ -173,4 +246,3 @@ def main() -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
-
