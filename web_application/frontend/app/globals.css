@@ -1,0 +1,5 @@
+/* Next.js App Router entry-point CSS.
+   All design tokens and Tailwind directives live in styles/globals.css.
+   This file re-exports them so both the App Router (app/) and any pages/
+   directory consumers share the same stylesheet. */
+@import '../styles/globals.css';

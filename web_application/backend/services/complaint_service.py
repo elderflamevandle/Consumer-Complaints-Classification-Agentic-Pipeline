@@ -1,0 +1,326 @@
+"""
+Complaint business-logic service.
+All DB access goes through MongoDB collections; no raw SQL ever.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from ..db.mongodb import complaints_col, pipeline_stages_col
+from ..models.audit_log import AuditAction
+from ..models.complaint import (
+    ClassificationResult,
+    ComplaintDocument,
+    ComplaintStatus,
+    PipelineStageDocument,
+    RemediationStep,
+)
+from .audit_service import log_event
+from .mock_pipeline import MockPipelineRunner, PIPELINE_NODES
+
+logger = logging.getLogger(__name__)
+
+# In-memory registry of running pipelines so WS handlers can subscribe.
+# Key: complaint_id  Value: asyncio.Queue of PipelineUpdate
+_running_pipelines: Dict[str, asyncio.Queue] = {}  # type: ignore[type-arg]
+
+
+# ── CRUD ─────────────────────────────────────────────────────────────────────
+
+async def create_complaint(
+    user_id: str,
+    complaint_text: str,
+    state_code: str = "CA",
+    ip: Optional[str] = None,
+) -> ComplaintDocument:
+    doc = ComplaintDocument(
+        user_id=user_id,
+        complaint_text=complaint_text,
+        state_code=state_code,
+        status=ComplaintStatus.PENDING,
+    )
+    await complaints_col().insert_one(doc.to_mongo())
+
+    await log_event(
+        AuditAction.COMPLAINT_CREATED,
+        user_id=user_id,
+        entity_type="complaint",
+        entity_id=doc.id,
+        details={"state_code": state_code, "text_length": len(complaint_text)},
+        ip_address=ip,
+    )
+    return doc
+
+
+async def get_complaint(complaint_id: str) -> Optional[ComplaintDocument]:
+    raw = await complaints_col().find_one({"_id": complaint_id})
+    if not raw:
+        return None
+    return ComplaintDocument.from_mongo(raw)
+
+
+async def list_complaints(
+    *,
+    user_id: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 50,
+    skip: int = 0,
+) -> List[ComplaintDocument]:
+    query: Dict[str, Any] = {}
+    if user_id:
+        query["user_id"] = user_id
+    if status:
+        query["status"] = status
+    cursor = (
+        complaints_col()
+        .find(query)
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+    docs = []
+    async for raw in cursor:
+        docs.append(ComplaintDocument.from_mongo(raw))
+    return docs
+
+
+async def count_complaints(
+    *,
+    user_id: Optional[str] = None,
+    status: Optional[str] = None,
+) -> int:
+    query: Dict[str, Any] = {}
+    if user_id:
+        query["user_id"] = user_id
+    if status:
+        query["status"] = status
+    return await complaints_col().count_documents(query)
+
+
+async def update_complaint_fields(
+    complaint_id: str,
+    fields: Dict[str, Any],
+) -> None:
+    fields["updated_at"] = datetime.utcnow()
+    await complaints_col().update_one({"_id": complaint_id}, {"$set": fields})
+
+
+# ── Pipeline stages ────────────────────────────────────────────────────────────
+
+async def get_pipeline_stages(complaint_id: str) -> List[Dict[str, Any]]:
+    cursor = pipeline_stages_col().find({"complaint_id": complaint_id}).sort("created_at", 1)
+    stages = []
+    async for raw in cursor:
+        raw["id"] = str(raw.pop("_id"))
+        stages.append(raw)
+    return stages
+
+
+async def upsert_stage(
+    complaint_id: str,
+    node: str,
+    status: str,
+    output: Optional[Dict[str, Any]] = None,
+    latency_ms: int = 0,
+    tokens_used: int = 0,
+    model_used: Optional[str] = None,
+    error: Optional[str] = None,
+) -> None:
+    now = datetime.utcnow()
+    await pipeline_stages_col().update_one(
+        {"complaint_id": complaint_id, "node": node},
+        {
+            "$set": {
+                "status": status,
+                "output": output,
+                "latency_ms": latency_ms,
+                "tokens_used": tokens_used,
+                "model_used": model_used,
+                "error": error,
+                "updated_at": now,
+            },
+            "$setOnInsert": {
+                "_id": PipelineStageDocument(
+                    complaint_id=complaint_id, node=node
+                ).id,
+                "created_at": now,
+            },
+        },
+        upsert=True,
+    )
+
+
+# ── Pipeline execution ────────────────────────────────────────────────────────
+
+def get_pipeline_queue(complaint_id: str) -> Optional[asyncio.Queue]:  # type: ignore[type-arg]
+    return _running_pipelines.get(complaint_id)
+
+
+async def run_pipeline(
+    complaint_id: str,
+    complaint_text: str,
+    state_code: str,
+    user_id: str,
+) -> None:
+    """
+    Launch the mock pipeline as a background task.
+    Updates are pushed to an asyncio.Queue that WS handlers consume.
+    """
+    queue: asyncio.Queue = asyncio.Queue()  # type: ignore[type-arg]
+    _running_pipelines[complaint_id] = queue
+
+    await update_complaint_fields(complaint_id, {"status": ComplaintStatus.PROCESSING})
+    await log_event(
+        AuditAction.PIPELINE_STARTED,
+        user_id=user_id,
+        entity_type="complaint",
+        entity_id=complaint_id,
+    )
+
+    # Initialise all stage records as "pending"
+    for node in PIPELINE_NODES:
+        await upsert_stage(complaint_id, node, "pending")
+
+    async def _worker():
+        runner = MockPipelineRunner(complaint_id, complaint_text, state_code)
+        try:
+            async for update in runner.run():
+                # Persist stage result
+                await upsert_stage(
+                    complaint_id,
+                    update.node,
+                    update.event if update.event in ("completed", "failed", "interrupted") else "running",
+                    output=update.payload,
+                    latency_ms=update.payload.get("latency_ms", 0),
+                    tokens_used=update.payload.get("tokens_used", 0),
+                    model_used=update.payload.get("model"),
+                )
+                # Push to WS queue
+                await queue.put(update.to_dict())
+
+            # Apply final results to complaint document
+            final = runner.final_result
+            update_fields: Dict[str, Any] = {}
+            if "scrubbed_text" in final:
+                update_fields["scrubbed_text"] = final["scrubbed_text"]
+            if "classification" in final:
+                update_fields["classification"] = final["classification"]
+            if "root_cause" in final:
+                update_fields["root_cause"] = final["root_cause"]
+            if "root_cause_evidence" in final:
+                update_fields["root_cause_evidence"] = final["root_cause_evidence"]
+            if "remediation_steps" in final:
+                update_fields["remediation_steps"] = final["remediation_steps"]
+            if "policy_citations" in final:
+                update_fields["policy_citations"] = final["policy_citations"]
+            if "response_draft" in final:
+                update_fields["response_draft"] = final["response_draft"]
+            if "audit_verdict" in final:
+                update_fields["audit_verdict"] = final["audit_verdict"]
+            if "explanation" in final:
+                update_fields["explanation"] = final["explanation"]
+            if "assigned_team" in final:
+                update_fields["assigned_team"] = final["assigned_team"]
+            if "review_required" in final:
+                update_fields["review_required"] = final["review_required"]
+
+            final_status = final.get("status", ComplaintStatus.COMPLETE)
+            update_fields["status"] = final_status
+            if final_status == ComplaintStatus.COMPLETE:
+                update_fields["completed_at"] = datetime.utcnow()
+
+            await update_complaint_fields(complaint_id, update_fields)
+
+            audit_action = (
+                AuditAction.PIPELINE_INTERRUPTED
+                if final_status == ComplaintStatus.INTERRUPTED
+                else AuditAction.PIPELINE_COMPLETED
+            )
+            await log_event(
+                audit_action,
+                user_id=user_id,
+                entity_type="complaint",
+                entity_id=complaint_id,
+                details={"status": final_status},
+            )
+
+            # Signal WS consumers that stream is done
+            await queue.put({"type": "pipeline_done", "status": final_status})
+
+        except Exception as exc:
+            logger.exception("Pipeline failed for complaint %s", complaint_id)
+            await update_complaint_fields(complaint_id, {"status": ComplaintStatus.FAILED})
+            await log_event(
+                AuditAction.PIPELINE_FAILED,
+                user_id=user_id,
+                entity_type="complaint",
+                entity_id=complaint_id,
+                details={"error": str(exc)},
+            )
+            await queue.put({"type": "pipeline_done", "status": "failed", "error": str(exc)})
+        finally:
+            _running_pipelines.pop(complaint_id, None)
+
+    asyncio.create_task(_worker())
+
+
+async def resume_pipeline_after_review(
+    complaint_id: str,
+    action: str,
+    reviewer_id: str,
+    reviewer_notes: Optional[str],
+    edited_text: Optional[str],
+    user_id: str,
+    ip: Optional[str] = None,
+) -> ComplaintDocument:
+    """Apply a reviewer decision and re-run pipeline from root_cause onward."""
+    complaint = await get_complaint(complaint_id)
+    if not complaint:
+        raise ValueError(f"Complaint {complaint_id} not found")
+
+    if complaint.status != ComplaintStatus.INTERRUPTED:
+        raise ValueError(f"Complaint {complaint_id} is not awaiting review")
+
+    update_fields: Dict[str, Any] = {
+        "review_action": action,
+        "reviewer_id": reviewer_id,
+        "reviewer_notes": reviewer_notes,
+        "reviewed_at": datetime.utcnow(),
+    }
+    if action == "reject":
+        update_fields["status"] = ComplaintStatus.REJECTED
+        await update_complaint_fields(complaint_id, update_fields)
+        await log_event(
+            AuditAction.COMPLAINT_REVIEWED,
+            user_id=reviewer_id,
+            entity_type="complaint",
+            entity_id=complaint_id,
+            details={"action": "reject"},
+            ip_address=ip,
+        )
+        return (await get_complaint(complaint_id))  # type: ignore[return-value]
+
+    # approve or edit — resume pipeline
+    text = edited_text or complaint.complaint_text
+    update_fields["status"] = ComplaintStatus.PROCESSING
+    if edited_text:
+        update_fields["complaint_text"] = edited_text
+    await update_complaint_fields(complaint_id, update_fields)
+
+    await log_event(
+        AuditAction.COMPLAINT_REVIEWED,
+        user_id=reviewer_id,
+        entity_type="complaint",
+        entity_id=complaint_id,
+        details={"action": action},
+        ip_address=ip,
+    )
+
+    # Re-run from root_cause (skip intake + classifier + routing)
+    await run_pipeline(complaint_id, text, complaint.state_code, user_id)
+
+    return (await get_complaint(complaint_id))  # type: ignore[return-value]

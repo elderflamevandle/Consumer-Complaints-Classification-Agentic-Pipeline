@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design-token CSS variables ────────────────────────────────────────────────
+   These map to the hsl(var(--*)) references in tailwind.config.js.
+   Values use the HSL channel format "H S% L%" (no hsl() wrapper) so Tailwind
+   can inject opacity modifiers: bg-primary/50, text-muted-foreground, etc.
+ ─────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Neutral surfaces */
+    --background:         210 40% 98%;   /* slate-50 equivalent */
+    --foreground:         222 47% 11%;   /* slate-900 */
+
+    /* Card / panel */
+    --card:               0 0% 100%;
+    --card-foreground:    222 47% 11%;
+
+    /* Primary — blue-600 family */
+    --primary:            221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary — slate-100 family */
+    --secondary:          210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted — slate-400 family */
+    --muted:              210 40% 93%;
+    --muted-foreground:   215 16% 47%;
+
+    /* Accent — blue-50 family */
+    --accent:             214 95% 93%;
+    --accent-foreground:  221 83% 40%;
+
+    /* Destructive — red-500 */
+    --destructive:        0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Chrome */
+    --border:             214 32% 91%;
+    --input:              214 32% 91%;
+    --ring:               221 83% 53%;
+
+    /* Border radius scale (used in tailwind.config borderRadius) */
+    --radius: 0.5rem;
+  }
+
+  /* Dark-mode tokens — activated via <html class="dark"> */
+  .dark {
+    --background:         222 47% 11%;
+    --foreground:         210 40% 98%;
+
+    --card:               222 47% 14%;
+    --card-foreground:    210 40% 98%;
+
+    --primary:            217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:          217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted:              217 33% 17%;
+    --muted-foreground:   215 20% 65%;
+
+    --accent:             217 33% 20%;
+    --accent-foreground:  217 91% 70%;
+
+    --destructive:        0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:             217 33% 17%;
+    --input:              217 33% 17%;
+    --ring:               217 91% 60%;
+  }
+}
+
+/* ── Base resets ────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply h-full scroll-smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply h-full bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Sensible focus ring for keyboard navigation */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Smooth scrollbar for Webkit */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+/* ── Reusable component layer ──────────────────────────────────────────────── */
+@layer components {
+  /* Form inputs */
+  .input-base {
+    @apply w-full rounded-lg border border-input bg-white px-3 py-2 text-sm
+           text-foreground placeholder:text-muted-foreground
+           focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent
+           disabled:cursor-not-allowed disabled:opacity-50
+           transition-colors duration-150;
+  }
+
+  /* Generic card shell */
+  .card-shell {
+    @apply rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden;
+  }
+
+  /* Section heading inside a card */
+  .section-header {
+    @apply border-b border-slate-100 px-6 py-3.5 text-sm font-semibold text-slate-700;
+  }
+
+  /* Monospace output blocks (explanation, logs) */
+  .output-block {
+    @apply whitespace-pre-wrap rounded-lg border border-slate-100 bg-slate-50
+           p-4 text-xs leading-relaxed font-mono text-slate-600 overflow-x-auto;
+  }
+
+  /* Pill badge for pipeline node states */
+  .node-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* Fade-in entry animation */
+  .animate-enter {
+    @apply animate-fade-in;
+  }
+}
+
+/* ── Utility overrides ──────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Hide scrollbar while keeping scroll functionality */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Text truncation with configurable line count */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
