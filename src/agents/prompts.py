@@ -52,6 +52,42 @@ Your ONLY task is to identify which financial product category a consumer \
 complaint belongs to. You must choose EXACTLY ONE product key from the list \
 provided in each request.
 
+PRODUCT-SPECIFIC DIAGNOSTIC FLAGS & EXAMPLES:
+- Checking or savings account
+  - Distinctive Flags: atm, branch deposit, debit transaction, check bounce, reversal, overdraft
+  - Example 1: "The bank removed my social security money after stating wait XXXX business days then the money could be released."
+  - Example 2: "This is a formal request for Chase Bank to provide all transactions. Over the past 9 months over {$3500.00} was stolen from me, via fraud debit transactions."
+
+- Credit card
+  - Distinctive Flags: travel rewards, flight booking, annual fee, late charge, apr, credit limit
+  - Example 1: "JP Morgan Chase Bank arbitrarily closed my credit card account. I had a {$5000.00} balance at the time. I transferred {$1400.00} by accident to the JP Morgan Chase card."
+  - Example 2: "I reached out to Chase Bank fraud department on XX/XX/24. They filed a claim for me.. for {$400.00} they were suppose to reverse a transaction my identity had gotten stolen."
+
+- Credit reporting or other personal consumer reports
+  - Distinctive Flags: inquiry, tradeline, identity theft, inaccurate reporting, dispute, bureau
+  - Example 1: "Hello JP Morgan chase is verifying fraudulent and inaccurate things on my report! Please have removed."
+  - Example 2: "this information does not belong to me I have been victimized. Remove it immediately."
+
+- Money transfer, virtual currency, or money service
+  - Distinctive Flags: zelle, crypto, wire, scammer, peer-to-peer, layered
+  - Example 1: "XXXX XXXX2023, I fell victim to two multi-layered scam operations run by XXXX which involved me making deposits for a total amount of XXXX USD from my XXXX XXXX XXXX account to JPMorgan Chase at the instructions of the scammers."
+  - Example 2: "Failure of my bank Chase to state information, warnings and protection concerning my banking accounts with the using transactions with XXXX since 2017."
+
+- Debt collection
+  - Distinctive Flags: garnish, debt collector, unvalidated, fair debt collection, fdcpa, harassment
+  - Example 1: "The account was opened fraudulent. I am connected to a XXXX XXXX XXXX and it is reported onto my social security number."
+  - Example 2: "My identity has been compromised, several accounts has been opened under my name without my authorization or knowledge."
+
+- Mortgage
+  - Distinctive Flags: escrow, pmi, underwriter, hud, fannie, modification, foreclosure
+  - Example 1: "I've tried since XX/XX/year>2025 and they have responded maybe 5 times called me 2 which I sent them several emails explaining I had a XXXX and have trouble talking on phone to no avail."
+  - Example 2: "I emailed the gentleman that was in charge of my home loan after working with him for 3 months from XXXX of 2023 through XXXX and he just stopped replying to my emails and calls."
+
+- Vehicle loan or lease
+  - Distinctive Flags: msrp, buyback, lessor, repo, dealership, auto, trims
+  - Example 1: "Chase didnt send me a right to redeem letter they sold the vehicle and charged off the remaining balance"
+  - Example 2: "Jp Morgan violated 15 U.S.C. 1611 part of the Truth in Lending Act ( TILA ) as well as XXXX XXXX XXXX also violated XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX violated15 U.S.C. 1611 part of the Truth in Lending Act ( TILA ) XXXX XXXX XXXX are included in this complaint"
+
 OUTPUT RULES (strictly enforced):
 1. Return ONLY a valid JSON object — no markdown, no explanation, no extra text.
 2. Use the exact product KEY string (e.g. "CREDIT_CARD"), not the display name.
