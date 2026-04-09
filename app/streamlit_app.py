@@ -95,7 +95,7 @@ def _render_budget_widget(budget: BudgetTelemetry | None) -> None:
 
     st.markdown(
         f"**Token Budget** &nbsp; "
-        f":{color}[{used_k}K / {total_k}K ({pct}%) — {status_label}]"
+        f":{color}[{used_k}K / {total_k}K ({pct}%) - {status_label}]"
     )
 
 
@@ -275,6 +275,25 @@ def _status_badge(status: StageStatus) -> str:
     return ":gray[PENDING]"
 
 
+def _coerce_warning_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item)]
+    if isinstance(value, tuple):
+        return [str(item) for item in value if str(item)]
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return [cleaned] if cleaned else []
+    return []
+
+
+def _collect_snapshot_warnings(snapshot: DashboardSnapshot) -> list[str]:
+    warnings: list[str] = []
+    for stage in snapshot.stages:
+        for warning in _coerce_warning_list(stage.artifacts.get("warnings")):
+            warnings.append(f"{stage.stage_name}: {warning}")
+    return warnings
+
+
 def _render_stage_cards(snapshot: DashboardSnapshot) -> None:
     """Render compact stage telemetry cards with expanders for deeper detail.
 
@@ -293,10 +312,15 @@ def _render_stage_cards(snapshot: DashboardSnapshot) -> None:
             f"Tokens: `{stage.total_tokens}`"
         )
         with st.expander(header, expanded=False):
+            stage_warnings = _coerce_warning_list(stage.artifacts.get("warnings"))
+            if stage_warnings:
+                st.warning("Warnings: " + "; ".join(stage_warnings))
             if stage.error_message:
                 st.error(f"Error: {stage.error_message}")
             elif stage.artifacts:
                 for key, value in stage.artifacts.items():
+                    if key == "warnings":
+                        continue
                     st.text(f"{key}: {value}")
             else:
                 st.caption("No artifact detail available for this stage.")
@@ -319,7 +343,7 @@ def _render_audit_events(snapshot: DashboardSnapshot) -> None:
         return
 
     st.caption(
-        f"Thread: `{snapshot.thread_id}` — {len(snapshot.audit_events)} event(s), "
+        f"Thread: `{snapshot.thread_id}` - {len(snapshot.audit_events)} event(s), "
         "oldest to newest"
     )
 
@@ -375,10 +399,14 @@ def _render_final_outputs(snapshot: DashboardSnapshot) -> None:
 def _render_results(snapshot: DashboardSnapshot) -> None:
     """Render the full post-run control-room view with tabs.
 
-    Tab 1 — Control Room: Stage cards + final response/explainer
-    Tab 2 — Audit Log: Chronological audit decision events
+    Tab 1 - Control Room: Stage cards + final response/explainer
+    Tab 2 - Audit Log: Chronological audit decision events
     """
     st.divider()
+
+    snapshot_warnings = _collect_snapshot_warnings(snapshot)
+    if snapshot_warnings:
+        st.warning("Non-critical warnings: " + " | ".join(snapshot_warnings))
 
     tab_control, tab_audit = st.tabs(["Control Room", "Audit Log"])
 

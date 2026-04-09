@@ -381,3 +381,17 @@ def test_run_complaint_facade_returns_dashboard_snapshot() -> None:
     assert len(result.stages) > 0
     assert result.budget is not None
     assert result.run_status in ("completed", "error", "review_required")
+
+
+def test_runtime_warning_helper_adds_warning_lists_without_clobbering_artifacts() -> None:
+    from src.ui.runtime import _with_stage_warnings
+
+    artifacts = {'status': 'ok'}
+    enriched = _with_stage_warnings(
+        artifacts,
+        warnings=['root_cause_used_fallback'],
+    )
+
+    assert artifacts == {'status': 'ok'}
+    assert enriched['status'] == 'ok'
+    assert enriched['warnings'] == ['root_cause_used_fallback']

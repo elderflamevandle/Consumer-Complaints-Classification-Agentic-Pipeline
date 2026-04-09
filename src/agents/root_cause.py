@@ -38,6 +38,7 @@ class RootCauseAgent:
         self.repair_retries = repair_retries
         self._audit_logger = audit_logger
         self.last_llm_attempts = 0
+        self.last_model: str | None = None
         self.used_fallback = False
 
     def diagnose(
@@ -49,6 +50,7 @@ class RootCauseAgent:
     ) -> RootCauseResult:
         cases = self._retriever(query_text=complaint_text, limit=limit)
         self.last_llm_attempts = 0
+        self.last_model = None
         self.used_fallback = False
 
         prompt = self._prompt(complaint_text, cases)
@@ -61,6 +63,7 @@ class RootCauseAgent:
                 critical=True,
                 max_tokens=420,
             )
+            self.last_model = response.model
             raw_output = response.text
             parsed = self._parse_or_none(raw_output)
             if parsed is not None:
@@ -75,6 +78,7 @@ class RootCauseAgent:
                 prompt = self._repair_prompt(complaint_text, cases, raw_output)
 
         self.used_fallback = True
+        self.last_model = 'heuristic-fallback'
         fallback = self._fallback_result(cases)
         self._log_outcome(
             thread_id=thread_id,

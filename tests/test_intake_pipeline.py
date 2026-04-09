@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from src.intake.pipeline import LOW_CONFIDENCE_THRESHOLD, prepare_intake
+from src.intake.pipeline import (
+    EMPTY_COMPLAINT_PLACEHOLDER,
+    LOW_CONFIDENCE_THRESHOLD,
+    MAX_CLASSIFIER_INPUT_CHARS,
+    MAX_SCRUBBED_TEXT_CHARS,
+    prepare_intake,
+)
 
 
 def test_pii_scrub_before_llm() -> None:
@@ -50,3 +56,30 @@ def test_low_confidence_scrub_routes_or_warns() -> None:
     assert without_reviewer.review_policy == 'warning_continue'
     assert without_reviewer.high_risk_warning is True
     assert 'low_scrub_confidence_reviewer_unavailable_warning_continue' in without_reviewer.warnings
+
+
+def test_empty_input_uses_placeholder_and_review_policy() -> None:
+    prepared = prepare_intake(raw_text='', reviewer_available=True)
+
+    assert prepared.scrubbed_text == EMPTY_COMPLAINT_PLACEHOLDER
+    assert prepared.classifier_input_text == EMPTY_COMPLAINT_PLACEHOLDER
+    assert prepared.route_to_human_review is True
+    assert prepared.review_policy == 'human_review_required'
+    assert 'empty_input' in prepared.warnings
+    assert 'empty_complaint_placeholder_applied' in prepared.warnings
+    assert prepared.trace['empty_input'] == 'true'
+
+
+def test_long_input_is_truncated_before_downstream_stages() -> None:
+    prepared = prepare_intake(
+        raw_text='billing issue ' * 600,
+        receipt_text='merchant details ' * 150,
+        reviewer_available=True,
+    )
+
+    assert len(prepared.scrubbed_text) <= MAX_SCRUBBED_TEXT_CHARS
+    assert len(prepared.classifier_input_text) <= MAX_CLASSIFIER_INPUT_CHARS
+    assert 'complaint_text_truncated_for_model_safety' in prepared.warnings
+    assert 'classifier_input_truncated_for_model_safety' in prepared.warnings
+    assert prepared.trace['scrubbed_text_truncated'] == 'true'
+    assert prepared.trace['classifier_input_truncated'] == 'true'

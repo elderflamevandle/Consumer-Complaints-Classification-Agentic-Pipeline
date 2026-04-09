@@ -100,3 +100,21 @@ def test_budget_degrade_for_non_critical_primary_calls() -> None:
 def test_smoke_script_handles_missing_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv('GROQ_API_KEY', raising=False)
     assert smoke_groq.main() == 0
+
+
+def test_critical_calls_do_not_degrade_when_budget_is_over_threshold() -> None:
+    tracker = TokenBudgetTracker(daily_budget=100, warning_ratio=0.5, degrade_ratio=0.6)
+    tracker.record_usage(65)
+    transport = ScriptedTransport([
+        {'content': 'primary-critical', 'usage': {'total_tokens': 5}}
+    ])
+    client = GroqLLMClient(
+        transport=transport,
+        budget_tracker=tracker,
+        sleep_fn=lambda _: None,
+    )
+
+    response = client.complete(prompt='hello', agent_name='default', critical=True)
+
+    assert response.degraded is False
+    assert transport.calls[0] == 'llama-3.3-70b-versatile'

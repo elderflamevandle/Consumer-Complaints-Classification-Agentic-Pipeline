@@ -161,6 +161,7 @@ def test_root_cause_outputs_ranked_evidence_with_citations() -> None:
     assert [item.rank for item in result.evidence] == [1, 2]
     assert result.evidence[0].citation.id == '101'
     assert result.evidence[1].citation.product == 'credit_card'
+    assert agent.last_model is not None
     assert agent.used_fallback is False
 
 
@@ -182,6 +183,7 @@ def test_conflicting_evidence_sets_ambiguous_flag() -> None:
     result = agent.diagnose('Multiple complaint patterns with no dominant trend')
 
     assert transport.calls == 2
+    assert agent.last_model == 'heuristic-fallback'
     assert agent.used_fallback is True
     assert result.ambiguity_flag == AmbiguityFlag.AMBIGUOUS
     assert len(result.evidence) == 5

@@ -158,6 +158,20 @@ def _safe_artifact(result: Any) -> dict[str, object]:
     return {}
 
 
+def _with_stage_warnings(
+    artifacts: dict[str, object],
+    *,
+    warnings: list[str] | None = None,
+) -> dict[str, object]:
+    normalized = [warning for warning in warnings or [] if warning]
+    if not normalized:
+        return artifacts
+
+    enriched = dict(artifacts)
+    enriched['warnings'] = normalized
+    return enriched
+
+
 def _build_budget_telemetry(tracker: TokenBudgetTracker) -> BudgetTelemetry:
     snap = tracker.snapshot()
     return budget_telemetry_from_snapshot(snap)
@@ -232,7 +246,8 @@ def run_complaint(
                 artifacts={
                     "scrub_confidence": str(intake.scrub_confidence),
                     "review_policy": str(intake.review_policy),
-                    "warnings": str(intake.warnings),
+                    "warnings": list(intake.warnings),
+                    "classifier_input_length": intake.trace.get("classifier_input_length", "0"),
                 },
             )
         )
@@ -273,7 +288,10 @@ def run_complaint(
                 model="llm",
                 latency_ms=classify_latency,
                 total_tokens=0,
-                artifacts=_safe_artifact(classification),
+                artifacts=_with_stage_warnings(
+                    _safe_artifact(classification),
+                    warnings=['classifier_used_fallback'] if classifier.used_fallback else None,
+                ),
             )
         )
     except Exception as exc:
@@ -304,7 +322,7 @@ def run_complaint(
         )
         rc_latency = int((time.monotonic() - rc_start) * 1000)
         model_used = str(root_cause_agent.last_model or "")
-        # Backfill latency to last audit record — log a summarized outcome
+        # Backfill latency to last audit record - log a summarized outcome
         audit_logger.log_node_outcome(
             thread_id=thread_id,
             node="root_cause",
@@ -320,7 +338,10 @@ def run_complaint(
                 model=model_used,
                 latency_ms=rc_latency,
                 total_tokens=0,
-                artifacts=_safe_artifact(diagnosis),
+                artifacts=_with_stage_warnings(
+                    _safe_artifact(diagnosis),
+                    warnings=['root_cause_used_fallback'] if root_cause_agent.used_fallback else None,
+                ),
             )
         )
     except Exception as exc:
@@ -360,7 +381,14 @@ def run_complaint(
                 model=str(remediator.last_model or "mcp-policy-gate"),
                 latency_ms=rem_latency,
                 total_tokens=0,
-                artifacts=_safe_artifact(remediation),
+                artifacts=_with_stage_warnings(
+                    _safe_artifact(remediation),
+                    warnings=(
+                        [f"remediation_status_{remediation.status.lower()}"]
+                        if remediation.status.lower() != 'ok'
+                        else None
+                    ),
+                ),
             )
         )
     except Exception as exc:
@@ -374,7 +402,7 @@ def run_complaint(
                 error_message=str(exc),
             )
         )
-        # Remediation failure is not fatal — create a stub remediation for downstream stages
+        # Remediation failure is not fatal - create a stub remediation for downstream stages
         remediation = RemediationResult(
             status="error",
             route="human_review",
@@ -406,7 +434,10 @@ def run_complaint(
                 model=str(writer.last_model or ""),
                 latency_ms=write_latency,
                 total_tokens=0,
-                artifacts=_safe_artifact(response_draft),
+                artifacts=_with_stage_warnings(
+                    _safe_artifact(response_draft),
+                    warnings=['writer_used_fallback'] if writer.used_fallback else None,
+                ),
             )
         )
     except Exception as exc:
@@ -444,7 +475,10 @@ def run_complaint(
                 model=str(auditor.last_model or ""),
                 latency_ms=audit_latency,
                 total_tokens=0,
-                artifacts=_safe_artifact(audit_result),
+                artifacts=_with_stage_warnings(
+                    _safe_artifact(audit_result),
+                    warnings=['auditor_used_fallback'] if auditor.used_fallback else None,
+                ),
             )
         )
     except Exception as exc:
@@ -485,7 +519,10 @@ def run_complaint(
                 model=str(explainer.last_model or ""),
                 latency_ms=exp_latency,
                 total_tokens=0,
-                artifacts=_safe_artifact(explanation),
+                artifacts=_with_stage_warnings(
+                    _safe_artifact(explanation),
+                    warnings=['explainer_used_fallback'] if explainer.used_fallback else None,
+                ),
             )
         )
         final_explanation_bullets = [

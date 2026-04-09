@@ -94,3 +94,24 @@ def test_resume_same_thread_after_review() -> None:
     assert resumed.route == 'continue'
     assert resumed.review_required is False
     assert any(event.startswith('thread-99:review_') for event in resumed.events)
+
+
+def test_ambiguous_intake_review_flow_preserves_same_thread_after_approve() -> None:
+    intake = prepare_intake(
+        raw_text='contact me about my account issue',
+        reviewer_available=True,
+    )
+    assert intake.review_policy == 'human_review_required'
+
+    state = build_routing_state(
+        thread_id='thread-ambiguous',
+        intake=intake,
+        classification=_classification(confidence=0.65, risk='MEDIUM'),
+    )
+    assert state.route == 'human_review'
+
+    resumed = apply_reviewer_action(state, ReviewDecision(action='approve'))
+
+    assert resumed.thread_id == 'thread-ambiguous'
+    assert resumed.route == 'continue'
+    assert resumed.review_action == 'approve'

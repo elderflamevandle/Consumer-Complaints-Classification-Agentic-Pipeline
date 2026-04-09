@@ -568,3 +568,16 @@ def test_streamlit_app_contains_review_panel_render_function() -> None:
     assert "_dispatch_review_action" in fn_names, (
         "streamlit_app.py must define _dispatch_review_action for same-thread resume"
     )
+
+
+def test_streamlit_app_surfaces_non_critical_warning_summary_via_existing_results_view() -> None:
+    import ast
+    from pathlib import Path
+
+    source = Path('app/streamlit_app.py').read_text()
+    tree = ast.parse(source)
+    fn_names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+
+    assert '_collect_snapshot_warnings' in fn_names
+    assert 'Non-critical warnings:' in source
+    assert 'st.warning("Warnings: " + "; ".join(stage_warnings))' in source
