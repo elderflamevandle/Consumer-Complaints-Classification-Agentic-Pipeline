@@ -1,4 +1,4 @@
-﻿"""Deterministic normalization from raw CFPB truth labels into classifier enums."""
+"""Deterministic normalization from raw CFPB truth labels into classifier enums."""
 
 from __future__ import annotations
 
@@ -22,28 +22,84 @@ _PRODUCT_MAP: dict[str, ProductType] = {
     'consumer loan': ProductType.LOAN,
     'credit card': ProductType.CREDIT_CARD,
     'credit card or prepaid card': ProductType.CREDIT_CARD,
+    'credit reporting': ProductType.OTHER,
+    'credit reporting or other personal consumer reports': ProductType.OTHER,
+    'credit reporting credit repair services or other personal consumer reports': ProductType.OTHER,
     'debt collection': ProductType.DEBT_COLLECTION,
+    'debt or credit management': ProductType.OTHER,
     'money transfer virtual currency or money service': ProductType.MONEY_TRANSFER,
     'mortgage': ProductType.MORTGAGE,
     'payday loan title loan or personal loan': ProductType.LOAN,
     'payday loan title loan personal loan or advance loan': ProductType.LOAN,
+    'prepaid card': ProductType.CREDIT_CARD,
     'student loan': ProductType.LOAN,
     'vehicle loan or lease': ProductType.LOAN,
 }
 
 _CUSTOMER_SERVICE_ISSUES = {
     'account opening closing or management',
+    'applying for a mortgage or refinancing an existing mortgage',
     'closing an account',
-    'closing your account',
     'closing cancelling account',
+    'closing on a mortgage',
+    'closing your account',
     'dealing with my lender or servicer',
     'dealing with your lender or servicer',
     'electronic communications',
+    'getting a credit card',
     'managing an account',
     'managing opening or closing account',
     'managing opening or closing your mobile wallet account',
+    'managing the loan or lease',
     'opening an account',
+    'other features terms or problems',
     'problem with customer service',
+    'trouble using the card',
+}
+
+_CREDIT_REPORTING_ISSUES = {
+    'credit monitoring or identity theft protection services',
+    'incorrect information on credit report',
+    'incorrect information on your report',
+    'improper use of your report',
+    'problem with a company s investigation into an existing problem',
+    'problem with a credit reporting company s investigation into an existing problem',
+    'problem with fraud alerts or security freezes',
+    'problem with personal statement of dispute',
+    'unable to get your credit report or credit score',
+}
+
+_PAYMENT_ISSUES = {
+    'loan modification collection foreclosure',
+    'loan servicing payments escrow account',
+    'money was not available when promised',
+    'problem caused by your funds being low',
+    'problem when making payments',
+    'struggling to pay mortgage',
+    'struggling to repay your loan',
+    'trouble during payment process',
+}
+
+_BILLING_ISSUES = {
+    'fees or interest',
+    'other transaction problem',
+    'problem with a lender or other company charging your account',
+    'problem with a purchase or transfer',
+    'problem with a purchase shown on your statement',
+}
+
+_FRAUD_ISSUES = {
+    'fraud or scam',
+    'unauthorized transactions or other transaction problem',
+}
+
+_OTHER_ISSUES = {
+    'attempts to collect debt not owed',
+    'communication tactics',
+    'cont d attempts collect debt not owed',
+    'false statements or representation',
+    'took or threatened to take negative or legal action',
+    'written notification about debt',
 }
 
 _CREDIT_REPORTING_KEYWORDS = (
@@ -98,8 +154,10 @@ def _clean_label(value: str) -> str:
     return re.sub(r'\s+', ' ', normalized).strip()
 
 
+
 def normalize_product(product: str) -> ProductType:
     return _PRODUCT_MAP.get(_clean_label(product), ProductType.OTHER)
+
 
 
 def normalize_issue(*, product: str, issue: str) -> IssueType:
@@ -109,6 +167,9 @@ def normalize_issue(*, product: str, issue: str) -> IssueType:
     if 'identity theft' in issue_token:
         return IssueType.IDENTITY_THEFT
 
+    if issue_token in _CREDIT_REPORTING_ISSUES:
+        return IssueType.CREDIT_REPORTING
+
     if 'credit reporting' in product_token and (
         'monitoring' in issue_token or 'fraud alert' in issue_token or 'security freez' in issue_token
     ):
@@ -117,8 +178,17 @@ def normalize_issue(*, product: str, issue: str) -> IssueType:
     if any(keyword in issue_token for keyword in _CREDIT_REPORTING_KEYWORDS):
         return IssueType.CREDIT_REPORTING
 
+    if issue_token in _FRAUD_ISSUES:
+        return IssueType.FRAUD
+
     if any(keyword in issue_token for keyword in _FRAUD_KEYWORDS):
         return IssueType.FRAUD
+
+    if issue_token in _PAYMENT_ISSUES:
+        return IssueType.PAYMENT
+
+    if issue_token in _BILLING_ISSUES:
+        return IssueType.BILLING
 
     if any(keyword in issue_token for keyword in _BILLING_KEYWORDS):
         return IssueType.BILLING
@@ -129,7 +199,11 @@ def normalize_issue(*, product: str, issue: str) -> IssueType:
     if issue_token in _CUSTOMER_SERVICE_ISSUES:
         return IssueType.CUSTOMER_SERVICE
 
+    if issue_token in _OTHER_ISSUES:
+        return IssueType.OTHER
+
     return IssueType.OTHER
+
 
 
 def normalize(*, product: str, issue: str) -> NormalizedTruth:
