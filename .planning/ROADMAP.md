@@ -16,8 +16,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Intake Intelligence and Classification Routing** - PII-safe intake plus confidence-aware classification (Completed: 2026-04-05)
 - [x] **Phase 3: Root Cause and MCP-Grounded Remediation** - RAG diagnosis and policy tool integration (completed 2026-04-05)
 - [x] **Phase 4: Response Generation with Compliance Audit Loop** - Drafting, self-correction cycle, and explainability chain (Completed: 2026-04-05)
-- [x] **Phase 5: Streamlit HITL Dashboard** - Interactive controls, thread-safe resume, and audit visibility (completed 2026-04-08)
-- [ ] **Phase 6: Evaluation, Fairness, and Robustness** - Metrics, edge-case handling, and reliability tests
+- [x] **Phase 5: Streamlit HITL Dashboard** - Interactive controls, thread-safe resume, and audit visibility
+ (completed 2026-04-08)
+- [x] **Phase 6: Evaluation, Fairness, and Robustness** - Metrics, edge-case handling, and reliability tests (Completed: 2026-04-08)
 - [ ] **Phase 7: Demo Hardening and Submission Package** - Final polish, repeatability checks, and delivery assets
 
 ## Phase Details
@@ -106,12 +107,12 @@ Plans:
 1. Evaluation script reports classification metrics on held-out set.
 2. Fairness metrics are computed and displayed for selected groups.
 3. Automated tests validate fallback behavior and critical graph transitions.
-**Plans**: 3 plans
+**Plans**: 3/3 plans complete
 
 Plans:
-- [ ] 06-01: Build evaluation harness for accuracy and quality metrics
-- [ ] 06-02: Add fairness computation and dashboard surfacing
-- [ ] 06-03: Add edge-case handling and targeted reliability tests
+- [x] 06-01: Build evaluation harness for accuracy and quality metrics
+- [x] 06-02: Add fairness computation and dashboard surfacing
+- [x] 06-03: Add edge-case handling and targeted reliability tests
 
 ### Phase 7: Demo Hardening and Submission Package
 **Goal**: Lock demo reliability and produce final deliverables.
@@ -139,5 +140,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Root Cause and MCP-Grounded Remediation | 3/3 | Complete    | 2026-04-05 |
 | 4. Response Generation with Compliance Audit Loop | 3/3 | Complete | 2026-04-05 |
 | 5. Streamlit HITL Dashboard | 3/3 | Complete   | 2026-04-08 |
-| 6. Evaluation, Fairness, and Robustness | 0/3 | Not started | - |
+| 6. Evaluation, Fairness, and Robustness | 3/3 | Complete | 2026-04-08 |
 | 7. Demo Hardening and Submission Package | 0/2 | Not started | - |

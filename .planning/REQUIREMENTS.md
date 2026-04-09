@@ -19,7 +19,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FLOW-01**: System scrubs PII from complaint text before any LLM call.
 - [x] **FLOW-02**: Graph routes low-confidence classification results to human review interrupt flow.
 - [x] **FLOW-03**: Graph state stores message history so auditor critiques can influence response rewrites.
-- [ ] **FLOW-04**: Pipeline handles empty input, long complaints, and ambiguous text without crashing.
+- [x] **FLOW-04**: Pipeline handles empty input, long complaints, and ambiguous text without crashing.
 - [x] **FLOW-05**: Every node writes structured decision logs to SQLite with timestamp and model metadata.
 
 ### Agent Intelligence
@@ -42,14 +42,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Evaluation and Reliability
 
-- [ ] **EVAL-01**: Team can run held-out classification evaluation and report macro F1.
-- [ ] **EVAL-02**: Team can compute disparate impact ratios across selected complaint groups.
+- [x] **EVAL-01**: Team can run held-out classification evaluation and report macro F1.
+- [x] **EVAL-02**: Team can compute disparate impact ratios across selected complaint groups.
 - [ ] **EVAL-03**: Golden demos pass three consecutive full runs without critical failure.
 
 ### Operations and Delivery
 
 - [x] **OPS-01**: Repository includes setup and run steps that let a new teammate start the system locally.
-- [ ] **OPS-02**: Automated tests cover fallback routing, schema validation, and core graph transitions.
+- [x] **OPS-02**: Automated tests cover fallback routing, schema validation, and core graph transitions.
 - [ ] **OPS-03**: Submission package includes architecture summary, setup instructions, and demo flow description.
 - [ ] **OPS-04**: Team has a short recorded backup demo and script for presentation-day contingency.
 
@@ -107,10 +107,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-03 | Phase 5 | Complete |
 | UI-04 | Phase 5 | Complete |
 | UI-05 | Phase 5 | Complete |
-| FLOW-04 | Phase 6 | Pending |
-| EVAL-01 | Phase 6 | Pending |
-| EVAL-02 | Phase 6 | Pending |
-| OPS-02 | Phase 6 | Pending |
+| FLOW-04 | Phase 6 | Complete (2026-04-08) |
+| EVAL-01 | Phase 6 | Complete (2026-04-08) |
+| EVAL-02 | Phase 6 | Complete (2026-04-08) |
+| OPS-02 | Phase 6 | Complete (2026-04-08) |
 | EVAL-03 | Phase 7 | Pending |
 | OPS-03 | Phase 7 | Pending |
 | OPS-04 | Phase 7 | Pending |
@@ -122,4 +122,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after Phase 4 completion*
+*Last updated: 2026-04-08 after Phase 6 completion*
