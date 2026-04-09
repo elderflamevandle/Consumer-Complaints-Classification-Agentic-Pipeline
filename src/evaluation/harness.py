@@ -81,7 +81,7 @@ class EvaluationSummary:
 
 def load_holdout_examples(dataset_path: Path) -> list[HoldoutExample]:
     try:
-        import pandas as pd
+        import pandas as pd  # type: ignore[import-untyped]
     except Exception as error:
         raise RuntimeError(
             'pandas + pyarrow are required to load the holdout parquet artifact.'
@@ -252,3 +252,4 @@ def _safe_divide(numerator: int, denominator: int) -> float:
 
 def _round(value: float) -> float:
     return round(value, 4)
+

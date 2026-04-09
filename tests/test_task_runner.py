@@ -25,7 +25,7 @@ EXPECTED_COMMANDS = {
         ('uv', 'run', 'python', 'scripts/seed_vectordb.py'),
     ),
     'eval': (
-        ('uv', 'run', 'python', '-c', "print('Evaluation harness arrives in Phase 6.')"),
+        ('uv', 'run', 'python', 'scripts/evaluate_classifier.py'),
     ),
     'test': (('uv', 'run', 'pytest', '-q'),),
     'lint': (('uv', 'run', 'ruff', 'check', '.'),),
@@ -33,8 +33,10 @@ EXPECTED_COMMANDS = {
 }
 
 
+
 def test_task_runner_exposes_expected_command_names() -> None:
     assert tasks.TASK_NAMES == EXPECTED_TASKS
+
 
 
 def test_makefile_uses_task_runner(repo_root: Path) -> None:
@@ -49,6 +51,7 @@ def test_task_runner_resolves_expected_commands(
     task_name: str, commands: tuple[tuple[str, ...], ...]
 ) -> None:
     assert tasks.get_task_commands(task_name) == commands
+
 
 
 def test_run_task_dispatches_commands_in_order(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -66,6 +69,7 @@ def test_run_task_dispatches_commands_in_order(monkeypatch: pytest.MonkeyPatch) 
     ]
 
 
+
 def test_main_returns_subprocess_exit_code(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run_task(_: str) -> int:
         raise subprocess.CalledProcessError(7, ('uv', 'run', 'pytest', '-q'))
@@ -75,9 +79,11 @@ def test_main_returns_subprocess_exit_code(monkeypatch: pytest.MonkeyPatch) -> N
     assert tasks.main(['test']) == 7
 
 
+
 def test_get_task_commands_rejects_unknown_task_name() -> None:
     with pytest.raises(ValueError, match='Unsupported task: unknown'):
         tasks.get_task_commands('unknown')
+
 
 
 def test_main_rejects_unknown_subcommand() -> None:

@@ -75,7 +75,10 @@ def _write_holdout_dataset(dataset_path: Path) -> None:
                 'id': 'row-2',
                 'product': 'Checking or savings account',
                 'issue': 'Problem when making payments',
-                'narrative': 'My checking account payment was delayed even though funds were available.',
+                'narrative': (
+                    'My checking account payment was delayed even though funds were ' 
+                    'available.'
+                ),
                 'state': 'NY',
                 'date': '2026-04-09',
             },
@@ -170,7 +173,11 @@ def test_cli_main_writes_artifacts_and_prints_summary(
             ),
         ]
     )
-    monkeypatch.setattr(evaluate_classifier, 'build_classifier', lambda: classifier)
+    monkeypatch.setattr(
+        evaluate_classifier,
+        'build_classifier',
+        lambda *, live=False: classifier,
+    )
 
     exit_code = evaluate_classifier.main(
         [
@@ -186,5 +193,7 @@ def test_cli_main_writes_artifacts_and_prints_summary(
     captured = capsys.readouterr()
     assert exit_code == 0
     assert 'Holdout evaluation complete' in captured.out
+    assert 'Mode: deterministic-fallback' in captured.out
     assert (tmp_path / 'artifacts' / 'holdout-evaluation.json').exists()
     assert (tmp_path / 'artifacts' / 'holdout-evaluation.md').exists()
+

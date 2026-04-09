@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 from src.schemas.classification import IssueType, ProductType
 
@@ -171,7 +171,9 @@ def normalize_issue(*, product: str, issue: str) -> IssueType:
         return IssueType.CREDIT_REPORTING
 
     if 'credit reporting' in product_token and (
-        'monitoring' in issue_token or 'fraud alert' in issue_token or 'security freez' in issue_token
+        'monitoring' in issue_token
+        or 'fraud alert' in issue_token
+        or 'security freez' in issue_token
     ):
         return IssueType.CREDIT_REPORTING
 
@@ -213,3 +215,5 @@ def normalize(*, product: str, issue: str) -> NormalizedTruth:
         product_type=normalize_product(product),
         issue_type=normalize_issue(product=product, issue=issue),
     )
+
+

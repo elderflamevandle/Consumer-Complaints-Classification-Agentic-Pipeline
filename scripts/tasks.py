@@ -34,13 +34,14 @@ TASK_COMMANDS: dict[str, CommandGroup] = {
         ('uv', 'run', 'python', 'scripts/seed_vectordb.py'),
     ),
     'eval': (
-        ('uv', 'run', 'python', '-c', "print('Evaluation harness arrives in Phase 6.')"),
+        ('uv', 'run', 'python', 'scripts/evaluate_classifier.py'),
     ),
     'test': (('uv', 'run', 'pytest', '-q'),),
     'lint': (('uv', 'run', 'ruff', 'check', '.'),),
     'typecheck': (('uv', 'run', 'mypy', 'src'),),
 }
 TASK_NAMES = tuple(TASK_COMMANDS)
+
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -51,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+
 def get_task_commands(task_name: str) -> CommandGroup:
     try:
         return TASK_COMMANDS[task_name]
@@ -58,10 +60,12 @@ def get_task_commands(task_name: str) -> CommandGroup:
         raise ValueError(f'Unsupported task: {task_name}') from error
 
 
+
 def run_task(task_name: str) -> int:
     for command in get_task_commands(task_name):
         subprocess.run(command, check=True, cwd=REPO_ROOT)
     return 0
+
 
 
 def main(argv: Sequence[str] | None = None) -> int:
