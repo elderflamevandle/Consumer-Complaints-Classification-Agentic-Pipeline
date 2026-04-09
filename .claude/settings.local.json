@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -n '136,185p' F:/Agentic_Hackathon/src/agents/remediator.py)",
+      "Bash(sed -n '116,165p' F:/Agentic_Hackathon/src/agents/auditor.py)",
+      "Bash(sed -n '106,145p' F:/Agentic_Hackathon/src/agents/explainer.py)",
+      "Bash(pip install:*)",
+      "Bash(python -c ':*)"
+    ]
+  }
+}

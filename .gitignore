@@ -13,3 +13,5 @@ data/processed/
 plan.md
 plan2.md
 tests/data_exploration.ipynb
+
+tests/outputs

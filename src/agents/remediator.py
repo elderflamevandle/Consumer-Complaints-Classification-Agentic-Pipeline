@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from src.agents.prompts import build_remediator_prompt
 from src.llm.client import GroqLLMClient
 from src.schemas.classification import ClassificationResult
 from src.schemas.root_cause import RootCauseResult
@@ -137,24 +138,15 @@ class RemediatorAgent:
         self,
         *,
         complaint_text: str,
-        classification: ClassificationResult,
-        diagnosis: RootCauseResult,
-        policy: PolicyLookupResult,
+        classification,
+        diagnosis,
+        policy,
     ) -> str:
-        assert policy.policy is not None
-        policy_data = policy.policy
-        return (
-            'You are the remediation planner for complaint resolution.\n'
-            'Return ONLY valid JSON with key action_plan (array of strings).\n'
-            'Action plan must be policy-grounded and ordered.\n\n'
-            f'Complaint:\n{complaint_text}\n\n'
-            f'Classification issue_type={classification.issue_type.value} '
-            f'product_type={classification.product_type.value}\n'
-            f'Root cause:\n{diagnosis.root_cause}\n\n'
-            'Policy:\n'
-            f'- sla_window: {policy_data.sla_window}\n'
-            f'- required_actions: {policy_data.required_actions}\n'
-            f'- regulatory_basis: {policy_data.regulatory_basis}\n'
+        return build_remediator_prompt(
+            complaint_text=complaint_text,
+            classification=classification,
+            diagnosis=diagnosis,
+            policy=policy,
         )
 
     def _parse_actions_or_none(self, text: str) -> list[str] | None:

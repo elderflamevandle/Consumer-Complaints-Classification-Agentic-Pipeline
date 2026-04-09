@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from src.agents.prompts import build_root_cause_prompt, build_root_cause_repair_prompt
+from src.agents.prompts import build_root_cause_prompt, build_root_cause_repair_prompt
 from src.llm.client import GroqLLMClient
 from src.schemas.root_cause import (
     AmbiguityFlag,
@@ -116,26 +118,7 @@ class RootCauseAgent:
         )
 
     def _prompt(self, complaint_text: str, cases: list[RetrievedCase]) -> str:
-        lines: list[str] = []
-        for idx, case in enumerate(cases, start=1):
-            lines.append(
-                (
-                    f'{idx}. id={case.id} product={case.product} issue={case.issue} '
-                    f'date={case.date} score={case.score:.4f}\n'
-                    f'   narrative={case.narrative[:260]}'
-                )
-            )
-
-        retrieved_block = '\n'.join(lines) if lines else 'No retrieved evidence available.'
-        return (
-            'You are the root-cause analyst for complaint resolution.\n'
-            'Return ONLY valid JSON with keys:\n'
-            'root_cause (string), evidence (array max 5), ambiguity_flag (CLEAR|AMBIGUOUS).\n'
-            'Each evidence item must include: rank, summary, score, '
-            'citation{id,product,issue,date}.\n\n'
-            f'Complaint:\n{complaint_text}\n\n'
-            f'Retrieved similar complaints:\n{retrieved_block}'
-        )
+        return build_root_cause_prompt(complaint_text, cases)
 
     def _repair_prompt(
         self,
@@ -143,14 +126,7 @@ class RootCauseAgent:
         cases: list[RetrievedCase],
         invalid_output: str,
     ) -> str:
-        return (
-            'Previous output failed schema validation. Return ONLY valid JSON with keys:\n'
-            'root_cause, evidence, ambiguity_flag.\n'
-            'evidence items need: rank, summary, score, citation{id,product,issue,date}.\n'
-            'No markdown, no explanations.\n\n'
-            f'{self._prompt(complaint_text, cases)}\n\n'
-            f'Invalid output:\n{invalid_output}'
-        )
+        return build_root_cause_repair_prompt(complaint_text, cases, invalid_output)
 
     def _fallback_result(self, cases: list[RetrievedCase]) -> RootCauseResult:
         if not cases:

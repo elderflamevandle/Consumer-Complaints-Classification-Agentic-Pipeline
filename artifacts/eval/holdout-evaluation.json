@@ -1,0 +1,306 @@
+{
+  "artifact_version": 1,
+  "dataset_path": "data\\processed\\holdout.parquet",
+  "exact_match_rate": 0.223,
+  "fairness": {
+    "baseline_exact_match_rate": 0.2724,
+    "baseline_group": "CREDIT_REPORTING",
+    "baseline_support": 1340,
+    "comparisons": [
+      {
+        "baseline_exact_match_rate": 0.2724,
+        "baseline_group": "CREDIT_REPORTING",
+        "baseline_support": 1340,
+        "disparity_ratio": 0.1924,
+        "exact_match_rate": 0.0524,
+        "group": "DEBT_COLLECTION",
+        "support": 229
+      },
+      {
+        "baseline_exact_match_rate": 0.2724,
+        "baseline_group": "CREDIT_REPORTING",
+        "baseline_support": 1340,
+        "disparity_ratio": 0.33,
+        "exact_match_rate": 0.0899,
+        "group": "BANK_ACCOUNT",
+        "support": 89
+      },
+      {
+        "baseline_exact_match_rate": 0.2724,
+        "baseline_group": "CREDIT_REPORTING",
+        "baseline_support": 1340,
+        "disparity_ratio": 0.9758,
+        "exact_match_rate": 0.2658,
+        "group": "MORTGAGE",
+        "support": 79
+      },
+      {
+        "baseline_exact_match_rate": 0.2724,
+        "baseline_group": "CREDIT_REPORTING",
+        "baseline_support": 1340,
+        "disparity_ratio": 0.3289,
+        "exact_match_rate": 0.0896,
+        "group": "MONEY_TRANSFER",
+        "support": 67
+      },
+      {
+        "baseline_exact_match_rate": 0.2724,
+        "baseline_group": "CREDIT_REPORTING",
+        "baseline_support": 1340,
+        "disparity_ratio": 0.6024,
+        "exact_match_rate": 0.1641,
+        "group": "CREDIT_CARD",
+        "support": 128
+      },
+      {
+        "baseline_exact_match_rate": 0.2724,
+        "baseline_group": "CREDIT_REPORTING",
+        "baseline_support": 1340,
+        "disparity_ratio": 0.6211,
+        "exact_match_rate": 0.1692,
+        "group": "LOAN",
+        "support": 65
+      }
+    ],
+    "min_support": 50,
+    "selected_groups": [
+      "CREDIT_REPORTING",
+      "DEBT_COLLECTION",
+      "BANK_ACCOUNT",
+      "MORTGAGE",
+      "MONEY_TRANSFER",
+      "CREDIT_CARD",
+      "LOAN"
+    ],
+    "skipped_groups": [],
+    "warnings": []
+  },
+  "fallback_rate": 1.0,
+  "issue_breakdown": [
+    {
+      "f1": 0.1729,
+      "label": "BILLING",
+      "precision": 0.1376,
+      "predicted": 218,
+      "recall": 0.2326,
+      "support": 129,
+      "true_positives": 30
+    },
+    {
+      "f1": 0.0519,
+      "label": "FRAUD",
+      "precision": 0.0271,
+      "predicted": 406,
+      "recall": 0.6111,
+      "support": 18,
+      "true_positives": 11
+    },
+    {
+      "f1": 0.1544,
+      "label": "PAYMENT",
+      "precision": 0.0935,
+      "predicted": 460,
+      "recall": 0.4433,
+      "support": 97,
+      "true_positives": 43
+    },
+    {
+      "f1": 0.0412,
+      "label": "IDENTITY_THEFT",
+      "precision": 0.0225,
+      "predicted": 89,
+      "recall": 0.25,
+      "support": 8,
+      "true_positives": 2
+    },
+    {
+      "f1": 0.153,
+      "label": "CUSTOMER_SERVICE",
+      "precision": 0.5185,
+      "predicted": 27,
+      "recall": 0.0897,
+      "support": 156,
+      "true_positives": 14
+    },
+    {
+      "f1": 0.4392,
+      "label": "CREDIT_REPORTING",
+      "precision": 0.8687,
+      "predicted": 457,
+      "recall": 0.2939,
+      "support": 1351,
+      "true_positives": 397
+    },
+    {
+      "f1": 0.2774,
+      "label": "OTHER",
+      "precision": 0.2362,
+      "predicted": 343,
+      "recall": 0.3361,
+      "support": 241,
+      "true_positives": 81
+    }
+  ],
+  "issue_macro_f1": 0.1843,
+  "macro_f1": 0.3545,
+  "product_breakdown": [
+    {
+      "f1": 0.5067,
+      "label": "CREDIT_CARD",
+      "precision": 0.3868,
+      "predicted": 243,
+      "recall": 0.7344,
+      "support": 128,
+      "true_positives": 94
+    },
+    {
+      "f1": 0.4173,
+      "label": "BANK_ACCOUNT",
+      "precision": 0.58,
+      "predicted": 50,
+      "recall": 0.3258,
+      "support": 89,
+      "true_positives": 29
+    },
+    {
+      "f1": 0.726,
+      "label": "MORTGAGE",
+      "precision": 0.791,
+      "predicted": 67,
+      "recall": 0.6709,
+      "support": 79,
+      "true_positives": 53
+    },
+    {
+      "f1": 0.4,
+      "label": "LOAN",
+      "precision": 0.313,
+      "predicted": 115,
+      "recall": 0.5538,
+      "support": 65,
+      "true_positives": 36
+    },
+    {
+      "f1": 0.2566,
+      "label": "DEBT_COLLECTION",
+      "precision": 0.52,
+      "predicted": 75,
+      "recall": 0.1703,
+      "support": 229,
+      "true_positives": 39
+    },
+    {
+      "f1": 0.5426,
+      "label": "MONEY_TRANSFER",
+      "precision": 0.5645,
+      "predicted": 62,
+      "recall": 0.5224,
+      "support": 67,
+      "true_positives": 35
+    },
+    {
+      "f1": 0.8231,
+      "label": "OTHER",
+      "precision": 0.8098,
+      "predicted": 1388,
+      "recall": 0.8369,
+      "support": 1343,
+      "true_positives": 1124
+    }
+  ],
+  "product_macro_f1": 0.5246,
+  "record_count": 2000,
+  "sampled_failures": [
+    {
+      "complaint_id": "10057965",
+      "confidence": 0.5,
+      "date": "2024-09-08",
+      "exact_match": false,
+      "issue_correct": false,
+      "llm_attempts": 3,
+      "narrative_excerpt": "I recently looked at my Transunion credit report and noticed some things are incomplete and not accurate. Account name XXXX XXXX XXXX XXXX has reported that...",
+      "predicted_issue_type": "PAYMENT",
+      "predicted_product_type": "OTHER",
+      "product_correct": true,
+      "raw_issue": "Incorrect information on your report",
+      "raw_product": "Credit reporting or other personal consumer reports",
+      "state": "SC",
+      "truth_issue_type": "CREDIT_REPORTING",
+      "truth_product_type": "OTHER",
+      "used_fallback": true
+    },
+    {
+      "complaint_id": "10090331",
+      "confidence": 0.5,
+      "date": "2024-09-11",
+      "exact_match": false,
+      "issue_correct": false,
+      "llm_attempts": 3,
+      "narrative_excerpt": "In accordance with the Fair Credit Reporting Act. 15 USC 1681i ( a ) ( 1 ) ( A ), Can you reinvestigate the completeness and accuracy of the list of accounts...",
+      "predicted_issue_type": "PAYMENT",
+      "predicted_product_type": "OTHER",
+      "product_correct": true,
+      "raw_issue": "Improper use of your report",
+      "raw_product": "Credit reporting or other personal consumer reports",
+      "state": "GA",
+      "truth_issue_type": "CREDIT_REPORTING",
+      "truth_product_type": "OTHER",
+      "used_fallback": true
+    },
+    {
+      "complaint_id": "10135910",
+      "confidence": 0.5,
+      "date": "2024-09-16",
+      "exact_match": false,
+      "issue_correct": true,
+      "llm_attempts": 3,
+      "narrative_excerpt": "I wrote a letter to Wells Fargo XX/XX/XXXX regarding an inquiry on my credit report dated XX/XX/XXXX stating I has a current mortgage of {$1000.00}. I am cur...",
+      "predicted_issue_type": "CREDIT_REPORTING",
+      "predicted_product_type": "CREDIT_CARD",
+      "product_correct": false,
+      "raw_issue": "Incorrect information on your report",
+      "raw_product": "Credit reporting or other personal consumer reports",
+      "state": "WI",
+      "truth_issue_type": "CREDIT_REPORTING",
+      "truth_product_type": "OTHER",
+      "used_fallback": true
+    },
+    {
+      "complaint_id": "10136876",
+      "confidence": 0.5,
+      "date": "2024-09-16",
+      "exact_match": false,
+      "issue_correct": false,
+      "llm_attempts": 3,
+      "narrative_excerpt": "Could you please take a moment to review and examine the attached documents? I believe your expertise will be invaluable in ensuring their accuracy and compl...",
+      "predicted_issue_type": "BILLING",
+      "predicted_product_type": "OTHER",
+      "product_correct": false,
+      "raw_issue": "Attempts to collect debt not owed",
+      "raw_product": "Debt collection",
+      "state": "FL",
+      "truth_issue_type": "OTHER",
+      "truth_product_type": "DEBT_COLLECTION",
+      "used_fallback": true
+    },
+    {
+      "complaint_id": "10165020",
+      "confidence": 0.5,
+      "date": "2024-09-18",
+      "exact_match": false,
+      "issue_correct": false,
+      "llm_attempts": 3,
+      "narrative_excerpt": "This is an unfair system to be ignored and taken advantage of while plenty of laws are broken due to malpractice and the severity of not taking my situation...",
+      "predicted_issue_type": "OTHER",
+      "predicted_product_type": "OTHER",
+      "product_correct": true,
+      "raw_issue": "Improper use of your report",
+      "raw_product": "Credit reporting or other personal consumer reports",
+      "state": "TX",
+      "truth_issue_type": "CREDIT_REPORTING",
+      "truth_product_type": "OTHER",
+      "used_fallback": true
+    }
+  ],
+  "warnings": []
+}

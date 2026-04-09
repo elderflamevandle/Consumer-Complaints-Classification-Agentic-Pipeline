@@ -137,6 +137,7 @@ class GroqLLMClient:
         temperature: float = 0.0,
         max_tokens: int = 512,
         critical: bool = True,
+        response_format: dict | None = None,
     ) -> LLMResponse:
         messages: list[dict[str, str]] = []
         if system_prompt:
@@ -159,6 +160,7 @@ class GroqLLMClient:
                         timeout=self.timeout_seconds,
                         temperature=temperature,
                         max_tokens=max_tokens,
+                        response_format=response_format,
                     )
                     text = _extract_text(payload)
                     total_tokens = _extract_total_tokens(payload)
@@ -199,6 +201,7 @@ class GroqLLMClient:
         timeout: float,
         temperature: float,
         max_tokens: int,
+        response_format: dict | None = None,
     ) -> Mapping[str, Any]:
         if not self.api_key:
             raise NonRetryableLLMError('GROQ_API_KEY is required for live calls')
@@ -212,13 +215,16 @@ class GroqLLMClient:
 
         client = OpenAI(api_key=self.api_key, base_url=self.base_url, timeout=timeout)
         typed_messages = cast(Any, [dict(m) for m in messages])
+        kwargs: dict[str, Any] = {
+            'model': model,
+            'messages': typed_messages,
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+        }
+        if response_format is not None:
+            kwargs['response_format'] = response_format
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=typed_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            response = client.chat.completions.create(**kwargs)
         except Exception as api_error:
             normalized = _normalize_error(api_error)
             raise normalized from api_error

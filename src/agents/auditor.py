@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from src.agents.prompts import build_auditor_prompt, build_auditor_repair_prompt, get_policy_labels
 from src.agents.remediator import RemediationResult
 from src.llm.client import GroqLLMClient
 from src.schemas.auditor import AuditReasonCode, AuditVerdict, ResponseAuditResult
@@ -113,26 +114,11 @@ class AuditorAgent:
         )
         return fallback
 
-    def _build_prompt(self, *, draft: ResponseDraft, remediation: RemediationResult) -> str:
-        policy_labels = ', '.join(_expected_policy_labels(remediation)) or 'None'
-        return (
-            'You are the compliance auditor for complaint responses.\n'
-            'Return ONLY valid JSON with keys: verdict, reason_codes, critique_summary, '
-            'must_fix_items, rewrite_recommended.\n'
-            'Use verdict PASS or FAIL.\n'
-            'Audit for structure completeness, policy citation labels, safe tone, '
-            'and overcommitment.\n\n'
-            f'Expected policy labels: {policy_labels}\n\n'
-            f'Response draft:\n{draft.render_text()}'
-        )
+    def _build_prompt(self, *, draft, remediation) -> str:
+        return build_auditor_prompt(draft=draft, remediation=remediation)
 
-    def _repair_prompt(self, *, draft: ResponseDraft, remediation: RemediationResult) -> str:
-        return (
-            'Previous auditor output failed schema validation. Return ONLY valid JSON with keys '
-            'verdict, reason_codes, critique_summary, must_fix_items, rewrite_recommended. '
-            'No markdown or explanation.\n\n'
-            f'{self._build_prompt(draft=draft, remediation=remediation)}'
-        )
+    def _repair_prompt(self, *, draft, remediation) -> str:
+        return build_auditor_repair_prompt(draft=draft, remediation=remediation)
 
     def _parse_or_none(self, text: str) -> ResponseAuditResult | None:
         candidate = _extract_json_object(text)
@@ -184,7 +170,7 @@ class AuditorAgent:
         ):
             reason_codes.append(AuditReasonCode.STRUCTURE_MISSING)
 
-        expected_labels = _expected_policy_labels(remediation)
+        expected_labels = get_policy_labels(remediation)
         if expected_labels and not set(expected_labels).issubset(set(draft.policy_citation_labels)):
             reason_codes.append(AuditReasonCode.MISSING_POLICY_CITATION)
 
@@ -240,18 +226,6 @@ class AuditorAgent:
             decision=decision,
             scrubbed_text=scrubbed_text[:220],
         )
-
-
-def _expected_policy_labels(remediation: RemediationResult) -> list[str]:
-    labels: list[str] = []
-    sla_window = remediation.policy_citations.get('sla_window')
-    if isinstance(sla_window, str) and sla_window:
-        labels.append(f'SLA window: {sla_window}')
-
-    regulatory_basis = remediation.policy_citations.get('regulatory_basis')
-    if isinstance(regulatory_basis, str) and regulatory_basis:
-        labels.append(f'Regulatory basis: {regulatory_basis}')
-    return labels
 
 
 def _extract_json_object(text: str) -> str | None:

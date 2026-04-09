@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from src.agents.prompts import build_writer_prompt, build_writer_repair_prompt, get_policy_labels
 from src.agents.remediator import RemediationResult
 from src.llm.client import GroqLLMClient
 from src.schemas.classification import ClassificationResult
@@ -125,51 +126,36 @@ class WriterAgent:
         self,
         *,
         complaint_text: str,
-        classification: ClassificationResult,
-        diagnosis: RootCauseResult,
-        remediation: RemediationResult,
+        classification,
+        diagnosis,
+        remediation,
         unresolved_issues: list[str],
     ) -> str:
-        remediation_steps = '\n'.join(
-            f'- {step.order}. {step.action} ({step.policy_reference})'
-            for step in remediation.action_plan
-        ) or '- No remediation steps available'
-        policy_labels = ', '.join(_policy_labels(remediation)) or 'None'
-        critique_text = '\n'.join(f'- {item}' for item in unresolved_issues) or '- None'
-        return (
-            'You are the response writer for complaint resolution.\n'
-            'Return ONLY valid JSON with keys: resolution_statement, acknowledgment, '
-            'findings, action_steps, timeline_next_steps, policy_citation_labels, '
-            'critique_items_addressed.\n'
-            'Tone must be calm and professional.\n'
-            'Use a fixed 4-block response structure: acknowledgment, findings, action steps, '
-            'timeline / next steps.\n'
-            'Do not admit liability. Do not guarantee outcomes.\n\n'
-            f'Complaint:\n{complaint_text}\n\n'
-            f'Classification: product={classification.product_type.value} '
-            f'issue={classification.issue_type.value}\n'
-            f'Root cause: {diagnosis.root_cause}\n'
-            f'Remediation steps:\n{remediation_steps}\n'
-            f'Policy labels to surface:\n{policy_labels}\n'
-            f'Unresolved critique items to address first:\n{critique_text}'
+        return build_writer_prompt(
+            complaint_text=complaint_text,
+            classification=classification,
+            diagnosis=diagnosis,
+            remediation=remediation,
+            unresolved_issues=unresolved_issues,
         )
 
     def _repair_prompt(
         self,
         *,
         complaint_text: str,
-        classification: ClassificationResult,
-        diagnosis: RootCauseResult,
-        remediation: RemediationResult,
+        classification,
+        diagnosis,
+        remediation,
         unresolved_issues: list[str],
         invalid_output: str,
     ) -> str:
-        return (
-            'Previous writer output failed schema validation. Return ONLY valid JSON with keys '
-            'resolution_statement, acknowledgment, findings, action_steps, timeline_next_steps, '
-            'policy_citation_labels, critique_items_addressed. No markdown or explanation.\n\n'
-            f'{self._build_prompt(complaint_text=complaint_text, classification=classification, diagnosis=diagnosis, remediation=remediation, unresolved_issues=unresolved_issues)}\n\n'  # noqa: E501
-            f'Invalid output:\n{invalid_output}'
+        return build_writer_repair_prompt(
+            complaint_text=complaint_text,
+            classification=classification,
+            diagnosis=diagnosis,
+            remediation=remediation,
+            unresolved_issues=unresolved_issues,
+            invalid_output=invalid_output,
         )
 
     def _parse_or_none(self, text: str) -> ResponseDraft | None:
@@ -214,7 +200,7 @@ class WriterAgent:
 
         labels = list(updated.get('policy_citation_labels') or [])
         if not labels:
-            labels = _policy_labels(remediation)
+            labels = get_policy_labels(remediation)
             if labels:
                 sanitized = True
         updated['policy_citation_labels'] = labels
@@ -235,7 +221,7 @@ class WriterAgent:
         remediation: RemediationResult,
         unresolved_issues: list[str],
     ) -> ResponseDraft:
-        issue_text = classification.issue_type.value.lower().replace('_', ' ')
+        issue_text = classification.issue_type.value.lower()
         product_text = classification.product_type.value.lower().replace('_', ' ')
         actions = [step.action for step in remediation.action_plan] or [
             'Review the information already provided and confirm the next required action.',
@@ -266,7 +252,7 @@ class WriterAgent:
                 f'We will follow up within {sla_window} with the next status update or '
                 'any additional information needed.'
             ),
-            policy_citation_labels=_policy_labels(remediation),
+            policy_citation_labels=get_policy_labels(remediation),
             critique_items_addressed=list(dict.fromkeys(unresolved_issues)),
         )
 
@@ -288,18 +274,6 @@ class WriterAgent:
             decision=decision,
             scrubbed_text=scrubbed_text[:220],
         )
-
-
-def _policy_labels(remediation: RemediationResult) -> list[str]:
-    labels: list[str] = []
-    sla_window = remediation.policy_citations.get('sla_window')
-    if isinstance(sla_window, str) and sla_window:
-        labels.append(f'SLA window: {sla_window}')
-
-    regulatory_basis = remediation.policy_citations.get('regulatory_basis')
-    if isinstance(regulatory_basis, str) and regulatory_basis:
-        labels.append(f'Regulatory basis: {regulatory_basis}')
-    return labels
 
 
 def _sanitize_text(text: str) -> str:

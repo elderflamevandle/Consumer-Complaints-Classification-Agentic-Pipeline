@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from src.agents.prompts import build_explainer_prompt, build_explainer_repair_prompt
 from src.agents.remediator import RemediationResult
 from src.llm.client import GroqLLMClient
 from src.schemas.auditor import ResponseAuditResult
@@ -106,38 +107,35 @@ class ExplainerAgent:
     def _build_prompt(
         self,
         *,
-        classification: ClassificationResult,
-        diagnosis: RootCauseResult,
-        remediation: RemediationResult,
-        final_response: ResponseDraft,
-        audit_verdict: ResponseAuditResult,
+        classification,
+        diagnosis,
+        remediation,
+        final_response,
+        audit_verdict,
     ) -> str:
-        return (
-            'You are the explainability summarizer for complaint resolution.\n'
-            'Return ONLY valid JSON with key bullets, where bullets is an array of objects '
-            'with keys stage, summary, citations.\n'
-            'Produce 5 to 7 bullets in deterministic order: classification, diagnosis, '
-            'remediation, response, audit.\n\n'
-            f'Classification: {classification.model_dump_json()}\n'
-            f'Diagnosis: {diagnosis.model_dump_json()}\n'
-            f'Remediation: {remediation.model_dump_json()}\n'
-            f'Final response: {final_response.model_dump_json()}\n'
-            f'Audit verdict: {audit_verdict.model_dump_json()}'
+        return build_explainer_prompt(
+            classification=classification,
+            diagnosis=diagnosis,
+            remediation=remediation,
+            final_response=final_response,
+            audit_verdict=audit_verdict,
         )
 
     def _repair_prompt(
         self,
         *,
-        classification: ClassificationResult,
-        diagnosis: RootCauseResult,
-        remediation: RemediationResult,
-        final_response: ResponseDraft,
-        audit_verdict: ResponseAuditResult,
+        classification,
+        diagnosis,
+        remediation,
+        final_response,
+        audit_verdict,
     ) -> str:
-        return (
-            'Previous explainer output failed schema validation. Return ONLY valid JSON with '
-            'key bullets (array of stage, summary, citations). No markdown.\n\n'
-            f'{self._build_prompt(classification=classification, diagnosis=diagnosis, remediation=remediation, final_response=final_response, audit_verdict=audit_verdict)}'  # noqa: E501
+        return build_explainer_repair_prompt(
+            classification=classification,
+            diagnosis=diagnosis,
+            remediation=remediation,
+            final_response=final_response,
+            audit_verdict=audit_verdict,
         )
 
     def _parse_or_none(self, text: str) -> ExplanationResult | None:

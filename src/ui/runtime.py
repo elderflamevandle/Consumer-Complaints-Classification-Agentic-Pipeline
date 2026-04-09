@@ -265,31 +265,54 @@ def run_complaint(
         return _error_snapshot(thread_id, stages, budget_tracker, str(exc))
 
     # -------------------------------------------------------------------------
-    # Stage 2: Classification
+    # Stage 2a: Product Classification (Stage 1 of 2)
     # -------------------------------------------------------------------------
     classifier = ClassifierAgent(llm_client=shared_client)
+    product_classification = None
+    issue_classification = None
     try:
         classify_start = time.monotonic()
         classification = classifier.classify(intake)
         classify_latency = int((time.monotonic() - classify_start) * 1000)
-        # Log to audit
+        product_classification = classifier.product_result
+        issue_classification = classifier.issue_result
+        # Log product classification to audit
         audit_logger.log_node_outcome(
             thread_id=thread_id,
-            node="classifier",
-            model=str(getattr(shared_client, "_last_model", "llm")),
-            latency_ms=classify_latency,
-            decision=f"classified_{classification.issue_type.value}",
+            node="product_classifier",
+            model=str(getattr(classifier._product_classifier, "last_model", "llm") or "llm"),
+            latency_ms=classify_latency // 2,
+            decision=f"product_{classification.product_type.value}",
             scrubbed_text=intake.scrubbed_text[:220],
         )
         stages.append(
             StageTelemetry(
-                stage_name="classifier",
+                stage_name="product_classifier",
                 status=StageStatus.COMPLETED,
-                model="llm",
-                latency_ms=classify_latency,
+                model=str(getattr(classifier._product_classifier, "last_model", "llm") or "llm"),
+                latency_ms=classify_latency // 2,
+                total_tokens=0,
+                artifacts=_safe_artifact(product_classification) if product_classification else None,
+            )
+        )
+        # Log issue classification to audit
+        audit_logger.log_node_outcome(
+            thread_id=thread_id,
+            node="issue_classifier",
+            model=str(getattr(classifier._issue_classifier, "last_model", "llm") or "llm"),
+            latency_ms=classify_latency // 2,
+            decision=f"issue_{classification.issue_type.value}_sev_{classification.severity.value}",
+            scrubbed_text=intake.scrubbed_text[:220],
+        )
+        stages.append(
+            StageTelemetry(
+                stage_name="issue_classifier",
+                status=StageStatus.COMPLETED,
+                model=str(getattr(classifier._issue_classifier, "last_model", "llm") or "llm"),
+                latency_ms=classify_latency // 2,
                 total_tokens=0,
                 artifacts=_with_stage_warnings(
-                    _safe_artifact(classification),
+                    _safe_artifact(issue_classification) if issue_classification else _safe_artifact(classification),
                     warnings=['classifier_used_fallback'] if classifier.used_fallback else None,
                 ),
             )
