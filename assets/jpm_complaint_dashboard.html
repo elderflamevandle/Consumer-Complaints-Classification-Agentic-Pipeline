@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JPMorgan Chase — Complaint Taxonomy Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .metric { background: #fff; border: 0.5px solid #ddd; border-radius: 10px; padding: 14px 16px; }
+  .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .metric-val { font-size: 22px; font-weight: 500; }
+  .metric-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .chart-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-box { background: #fff; border: 0.5px solid #ddd; border-radius: 12px; padding: 16px; }
+  .chart-box.full { grid-column: 1 / -1; }
+  .section-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #666; }
+  .leg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .drill-hint { font-size: 11px; color: #aaa; margin-bottom: 8px; }
+  .back-btn { display: none; background: none; border: 0.5px solid #ccc; border-radius: 8px; padding: 4px 10px; font-size: 12px; color: #555; cursor: pointer; margin-bottom: 8px; }
+  .back-btn:hover { background: #f5f5f3; }
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>JPMorgan Chase — Complaint Taxonomy Dashboard</h1>
+<p class="subtitle">CFPB Consumer Complaint Database · 22,365 records · 54 issues → 12 consolidated categories</p>
+
+<div class="metrics">
+  <div class="metric"><div class="metric-label">Total complaints</div><div class="metric-val">22,365</div><div class="metric-sub">JPMorgan Chase</div></div>
+  <div class="metric"><div class="metric-label">Consolidated categories</div><div class="metric-val">12</div><div class="metric-sub">from 54 original issues</div></div>
+  <div class="metric"><div class="metric-label">Largest category</div><div class="metric-val">27.7%</div><div class="metric-sub">Account management</div></div>
+  <div class="metric"><div class="metric-label">Top 5 coverage</div><div class="metric-val">76.5%</div><div class="metric-sub">of all complaints</div></div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-box">
+    <div class="section-title">Complaints by category</div>
+    <div class="drill-hint" id="drill-hint">Click any bar to drill into sub-issues</div>
+    <button class="back-btn" id="back-btn" onclick="showMain()">← Back to all categories</button>
+    <div style="position:relative;width:100%;height:340px;">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-box">
+    <div class="section-title">Distribution overview</div>
+    <div class="legend" id="donutLegend"></div>
+    <div style="position:relative;width:100%;height:250px;">
+      <canvas id="donutChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="chart-box full">
+  <div class="section-title">Monthly trend — top 5 categories</div>
+  <div class="legend" id="trendLegend"></div>
+  <div style="position:relative;width:100%;height:220px;">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#185FA5','#0F6E56','#D85A30','#993556','#3B6D11','#534AB7','#BA7517','#99351E','#185F75','#6E3B0F','#2D6E99','#5F5E5A'];
+const issueTotals = [
+  {label:"Account management",count:6199},{label:"Credit reporting & disputes",count:3361},
+  {label:"Transaction disputes & billing",count:2748},{label:"Fraud, scams & unauthorized",count:2444},
+  {label:"Account closure & fund recovery",count:2367},{label:"Credit card services & features",count:1600},
+  {label:"Fees, interest & pricing",count:1124},{label:"Identity theft & security",count:811},
+  {label:"Debt collection practices",count:771},{label:"Mortgage & home loans",count:490},
+  {label:"Auto loans & leases",count:346},{label:"Digital banking & mobile wallet",count:104}
+];
+const subData = {
+  "Account management":[{name:"Deposits & withdrawals",count:2865},{name:"Debit / ATM card problems",count:1046},{name:"Account access & errors",count:642},{name:"Account opening issues",count:626},{name:"Overdrafts & NSF fees",count:591},{name:"Payment processing errors",count:429}],
+  "Credit reporting & disputes":[{name:"Inaccurate account information",count:1479},{name:"Improper use of credit report",count:642},{name:"Investigation did not fix error",count:599},{name:"Unrecognized credit inquiries",count:558},{name:"Fraud alerts & security freezes",count:59},{name:"Unable to access credit report",count:24}],
+  "Transaction disputes & billing":[{name:"Unresolved purchase dispute",count:1460},{name:"Other transaction problem",count:511},{name:"Unauthorized card charge",count:469},{name:"Payment processing errors",count:237},{name:"Overcharged on purchase",count:71}],
+  "Fraud, scams & unauthorized":[{name:"Unauthorized account charges",count:1129},{name:"Fraud or scam",count:906},{name:"Unauthorized transactions",count:183},{name:"Wrong day / amount charged",count:162},{name:"Can't stop withdrawals",count:64}],
+  "Account closure & fund recovery":[{name:"Company-initiated closure",count:1369},{name:"Funds not received after closure",count:713},{name:"Unable to close account",count:173},{name:"Money not available as promised",count:112}],
+  "Credit card services & features":[{name:"Other card service issues",count:770},{name:"Rewards & benefits problems",count:458},{name:"Card usage blocked / restricted",count:139},{name:"Credit limit issues",count:87},{name:"Financial hardship / payment plans",count:81},{name:"Balance transfer & cash advance",count:65}],
+  "Fees, interest & pricing":[{name:"Promotional terms not honored",count:390},{name:"Excessive or incorrect fees",count:289},{name:"Misleading advertising",count:242},{name:"Overcharged interest",count:165},{name:"Unexpected interest rate increase",count:38}],
+  "Identity theft & security":[{name:"Account opened without consent",count:427},{name:"Credit card application issues",count:297},{name:"Credit monitoring service issues",count:87}],
+  "Debt collection practices":[{name:"Collecting debt not owed",count:373},{name:"Threatening or legal action",count:120},{name:"False representations",count:103},{name:"Improper debt notification",count:93},{name:"Abusive communication tactics",count:82}],
+  "Mortgage & home loans":[{name:"Mortgage payment problems",count:253},{name:"Mortgage application issues",count:107},{name:"Struggling to pay / foreclosure",count:73},{name:"Closing process issues",count:57}],
+  "Auto loans & leases":[{name:"Billing & payment problems",count:112},{name:"End-of-loan / title problems",count:79},{name:"Repossession issues",count:67},{name:"Loan application & denial",count:59},{name:"Lease termination problems",count:29}],
+  "Digital banking & mobile wallet":[{name:"Mobile wallet access issues",count:62},{name:"Other digital service problems",count:25},{name:"Mobile account management",count:17}]
+};
+const trendMonths=["2024-09","2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02"];
+const trendData={"Account management":[216,222,201,234,343,233,235,254,325,304,369,303,294,278,275,214,270,3],"Credit reporting & disputes":[130,121,162,162,232,158,175,143,165,153,162,119,103,93,95,76,26,0],"Transaction disputes & billing":[108,106,101,112,204,101,107,93,95,127,129,88,98,81,118,92,118,4],"Fraud, scams & unauthorized":[92,93,69,93,253,94,92,87,118,90,101,127,100,87,114,80,106,1],"Account closure & fund recovery":[76,78,63,98,115,99,101,90,107,97,119,100,114,107,113,82,97,2]};
+const top5keys=Object.keys(trendData);
+const total=22365;
+let inDrill=false;
+
+function shortLabel(l){return l.length>30?l.slice(0,28)+'…':l;}
+
+document.getElementById('donutLegend').innerHTML=issueTotals.map((d,i)=>
+  `<span class="leg-item"><span class="leg-dot" style="background:${COLORS[i]}"></span>${shortLabel(d.label)} ${(d.count/total*100).toFixed(1)}%</span>`
+).join('');
+
+document.getElementById('trendLegend').innerHTML=top5keys.map((k,i)=>
+  `<span class="leg-item"><span class="leg-dot" style="background:${COLORS[i]}"></span>${k}</span>`
+).join('');
+
+const barChart=new Chart(document.getElementById('barChart'),{
+  type:'bar',
+  data:{labels:issueTotals.map(d=>shortLabel(d.label)),datasets:[{data:issueTotals.map(d=>d.count),backgroundColor:COLORS,borderRadius:3,borderSkipped:false}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    onClick(e,els){if(!inDrill&&els.length)showDrill(els[0].index);},
+    onHover(e,els){e.native.target.style.cursor=(els.length&&!inDrill)?'pointer':'default';},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toLocaleString()} (${(ctx.parsed.x/total*100).toFixed(1)}%)`}}},
+    scales:{x:{max:7000,grid:{color:'rgba(0,0,0,0.06)'},ticks:{font:{size:11},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+});
+
+const donutChart=new Chart(document.getElementById('donutChart'),{
+  type:'doughnut',
+  data:{labels:issueTotals.map(d=>d.label),datasets:[{data:issueTotals.map(d=>d.count),backgroundColor:COLORS,borderWidth:2,borderColor:'transparent',hoverOffset:6}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.toLocaleString()} (${(ctx.parsed/total*100).toFixed(1)}%)`}}}}
+});
+
+const monthLabels=trendMonths.map(m=>{const[y,mo]=m.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);});
+new Chart(document.getElementById('trendChart'),{
+  type:'line',
+  data:{labels:monthLabels,datasets:top5keys.map((k,i)=>({label:k,data:trendData[k],borderColor:COLORS[i],backgroundColor:COLORS[i]+'18',borderWidth:1.8,pointRadius:2.5,pointHoverRadius:5,tension:0.35,fill:false}))},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10},autoSkip:true,maxTicksLimit:10}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10}}}}}
+});
+
+function showDrill(idx){
+  inDrill=true;
+  document.getElementById('drill-hint').style.display='none';
+  document.getElementById('back-btn').style.display='inline-block';
+  const issue=issueTotals[idx].label; const subs=subData[issue]; const parentTotal=issueTotals[idx].count; const color=COLORS[idx];
+  barChart.data.labels=subs.map(s=>shortLabel(s.name));
+  barChart.data.datasets[0].data=subs.map(s=>s.count);
+  barChart.data.datasets[0].backgroundColor=subs.map((_,i)=>color+Math.round(255*(0.9-i*0.1)).toString(16).padStart(2,'0'));
+  barChart.options.scales.x.max=Math.ceil(subs[0].count*1.15);
+  barChart.options.plugins.tooltip.callbacks.label=ctx=>` ${ctx.parsed.x.toLocaleString()} (${(ctx.parsed.x/parentTotal*100).toFixed(1)}% of category)`;
+  barChart.update();
+}
+function showMain(){
+  inDrill=false;
+  document.getElementById('drill-hint').style.display='';
+  document.getElementById('back-btn').style.display='none';
+  barChart.data.labels=issueTotals.map(d=>shortLabel(d.label));
+  barChart.data.datasets[0].data=issueTotals.map(d=>d.count);
+  barChart.data.datasets[0].backgroundColor=COLORS;
+  barChart.options.scales.x.max=7000;
+  barChart.options.plugins.tooltip.callbacks.label=ctx=>` ${ctx.parsed.x.toLocaleString()} (${(ctx.parsed.x/total*100).toFixed(1)}%)`;
+  barChart.update();
+}
+</script>
+</body>
+</html>
