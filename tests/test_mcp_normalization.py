@@ -1,7 +1,7 @@
 """Tests for MCP server _normalize_issue function and expanded regulation lookups."""
 from __future__ import annotations
 
-from mcp_server.server import _normalize_issue, get_sla_requirements
+from mcp_server.server import _normalize_issue
 
 
 def test_normalize_strips_apostrophe() -> None:
@@ -24,3 +24,12 @@ def test_normalize_strips_comma_in_managing_opening() -> None:
 def test_normalize_strips_comma_in_overdraft() -> None:
     result = _normalize_issue("Overdraft, savings, or rewards features")
     assert result == "OVERDRAFT_SAVINGS_OR_REWARDS_FEATURES"
+
+
+def test_normalize_idempotent() -> None:
+    key = "CREDIT_CARD"
+    assert _normalize_issue(key) == key
+
+
+def test_normalize_empty_string() -> None:
+    assert _normalize_issue("") == ""
