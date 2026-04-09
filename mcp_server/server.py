@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,10 @@ DEFAULT_REGULATIONS_PATH = Path(__file__).with_name('mock_regulations.json')
 
 
 def _normalize_issue(issue_type: str) -> str:
-    return issue_type.strip().upper().replace('-', '_').replace(' ', '_')
+    normalized = issue_type.strip().upper()
+    normalized = re.sub(r'[\s\-]+', '_', normalized)   # spaces/hyphens → underscore
+    normalized = re.sub(r'[^A-Z0-9_]', '', normalized) # remove all other non-word chars
+    return normalized
 
 
 def _load_regulations(path: Path = DEFAULT_REGULATIONS_PATH) -> dict[str, Any]:
