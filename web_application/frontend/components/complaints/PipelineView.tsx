@@ -1,178 +1,284 @@
 'use client'
-import { CheckCircle2, Circle, Loader2, XCircle, PauseCircle } from 'lucide-react'
+import { CheckCircle2, Loader2, XCircle, PauseCircle, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PipelineStage } from '@/types'
 
-const NODE_LABELS: Record<string, string> = {
-  intake: 'Intake & PII Scrubbing',
-  classifier: 'Complaint Classification',
-  routing: 'Routing Decision',
-  root_cause: 'Root Cause Analysis',
-  remediator: 'Remediation Planning',
-  writer: 'Response Drafting',
-  auditor: 'Compliance Audit',
-  explainer: 'Explanation Generation',
+/* ── Node metadata ───────────────────────────────────────────────────────── */
+const NODE_META: Record<string, { label: string; desc: string; icon: string }> = {
+  intake:     { label: 'Intake & PII Scrubbing',      desc: 'Sanitizing personal identifiers',       icon: '🔍' },
+  classifier: { label: 'Complaint Classification',     desc: 'Product · Issue · Severity · Risk',     icon: '🧠' },
+  routing:    { label: 'Routing Decision',             desc: 'Team assignment & escalation logic',    icon: '📡' },
+  root_cause: { label: 'Root Cause Analysis',          desc: 'Historical pattern matching via RAG',   icon: '🔬' },
+  remediator: { label: 'Remediation Planning',         desc: 'Policy-grounded action steps',          icon: '🛠' },
+  writer:     { label: 'Response Drafting',            desc: 'Regulatory-compliant letter generation', icon: '✍️' },
+  auditor:    { label: 'Compliance Audit',             desc: 'CFPB / FCRA / TILA verification',       icon: '⚖️' },
+  explainer:  { label: 'Explanation Generation',       desc: 'Full regulatory chain-of-thought',      icon: '📋' },
 }
 
 const NODE_ORDER = ['intake','classifier','routing','root_cause','remediator','writer','auditor','explainer']
 
 interface Props {
   stages: PipelineStage[]
-  status: string
+  status:  string
+}
+
+/* ── Status pill styling ─────────────────────────────────────────────────── */
+const STATUS_STYLES: Record<string, string> = {
+  complete:    'bg-emerald-500/12 text-emerald-400 border-emerald-500/25',
+  processing:  'bg-primary/12 text-indigo-400 border-primary/25',
+  interrupted: 'bg-amber-500/12 text-amber-400 border-amber-500/25',
+  failed:      'bg-red-500/12 text-red-400 border-red-500/25',
+  pending:     'bg-white/[0.06] text-muted-foreground border-white/10',
 }
 
 export default function PipelineView({ stages, status }: Props) {
-  const stageMap = Object.fromEntries(stages.map((s) => [s.node, s]))
+  const stageMap  = Object.fromEntries(stages.map((s) => [s.node, s]))
   const completed = stages.filter((s) => s.status === 'completed').length
-  const total = NODE_ORDER.length
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0
+  const total     = NODE_ORDER.length
+  const pct       = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  /* Track fill height — proportional to completed nodes */
+  const trackPct = `${(completed / total) * 100}%`
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-      <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+    <div className="glass-card overflow-hidden">
+
+      {/* ── Header ───────────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
         <div>
-          <h3 className="font-semibold text-slate-900">AI Pipeline</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{completed} of {total} nodes complete</p>
+          <h3 className="text-sm font-semibold text-foreground">AI Processing Pipeline</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground font-mono">
+            {completed} / {total} nodes &nbsp;·&nbsp; {pct}% complete
+          </p>
         </div>
-        <div className="text-right">
+
+        <div className="flex items-center gap-3">
+          {/* Progress arc */}
+          <svg className="h-8 w-8 -rotate-90" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="12" stroke="rgba(255,255,255,0.06)" strokeWidth="3" fill="none" />
+            <circle
+              cx="16" cy="16" r="12"
+              stroke="#6366F1"
+              strokeWidth="3"
+              fill="none"
+              strokeDasharray={`${2 * Math.PI * 12}`}
+              strokeDashoffset={`${2 * Math.PI * 12 * (1 - pct / 100)}`}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.65,0,0.35,1)', filter: 'drop-shadow(0 0 4px rgba(99,102,241,0.6))' }}
+            />
+          </svg>
+
           <span className={cn(
-            'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
-            status === 'complete' && 'bg-emerald-100 text-emerald-800',
-            status === 'processing' && 'bg-blue-100 text-blue-800',
-            status === 'interrupted' && 'bg-amber-100 text-amber-800',
-            status === 'failed' && 'bg-red-100 text-red-800',
-            status === 'pending' && 'bg-slate-100 text-slate-600',
+            'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize',
+            STATUS_STYLES[status] ?? STATUS_STYLES.pending
           )}>
             {status}
           </span>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-1.5 bg-slate-100">
-        <div
-          className="h-full bg-blue-500 transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      {/* ── Node track ───────────────────────────────────────── */}
+      <div className="relative px-5 py-5">
+        {/* Vertical track */}
+        <div className="pipeline-track-bg" />
+        <div className="pipeline-track-fill" style={{ height: trackPct }} />
 
-      {/* Node list */}
-      <div className="divide-y divide-slate-50">
-        {NODE_ORDER.map((node, idx) => {
-          const stage = stageMap[node]
-          const nodeStatus = stage?.status ?? 'pending'
+        {/* Nodes */}
+        <div className="space-y-0">
+          {NODE_ORDER.map((node, idx) => {
+            const stage      = stageMap[node]
+            const nodeStatus = stage?.status ?? 'pending'
+            const meta       = NODE_META[node]
+            const isLast     = idx === NODE_ORDER.length - 1
 
-          return (
-            <div key={node} className="flex items-start gap-4 px-6 py-3.5">
-              {/* Icon */}
-              <div className="mt-0.5 flex-shrink-0">
-                {nodeStatus === 'completed' && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                {nodeStatus === 'running' && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
-                {nodeStatus === 'failed' && <XCircle className="h-5 w-5 text-red-500" />}
-                {nodeStatus === 'interrupted' && <PauseCircle className="h-5 w-5 text-amber-500" />}
-                {(nodeStatus === 'pending' || !stage) && (
-                  <Circle className="h-5 w-5 text-slate-300" />
-                )}
-              </div>
+            return (
+              <div key={node} className={cn('relative flex items-start gap-4', !isLast && 'pb-5')}>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className={cn(
-                    'text-sm font-medium',
-                    nodeStatus === 'completed' ? 'text-slate-900' :
-                    nodeStatus === 'running' ? 'text-blue-700' :
-                    nodeStatus === 'failed' ? 'text-red-700' :
-                    'text-slate-400',
-                  )}>
-                    {NODE_LABELS[node] ?? node}
-                  </p>
-                  {(stage?.latency_ms ?? 0) > 0 && (
-                    <span className="text-xs text-slate-400 flex-shrink-0">{stage!.latency_ms}ms</span>
+                {/* ── Node indicator ── */}
+                <div className="relative z-10 flex-shrink-0 mt-0.5">
+                  {nodeStatus === 'completed' && (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/40 animate-scale-in">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    </div>
+                  )}
+                  {nodeStatus === 'running' && (
+                    <div className="relative flex h-6 w-6 items-center justify-center">
+                      <div className="node-pulse" />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/25 border border-primary/50">
+                        <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+                      </div>
+                    </div>
+                  )}
+                  {nodeStatus === 'interrupted' && (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/40">
+                      <PauseCircle className="h-3.5 w-3.5 text-amber-400" />
+                    </div>
+                  )}
+                  {nodeStatus === 'failed' && (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/20 border border-red-500/40">
+                      <XCircle className="h-3.5 w-3.5 text-red-400" />
+                    </div>
+                  )}
+                  {(nodeStatus === 'pending' || !stage) && (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]">
+                      <Circle className="h-3 w-3 text-white/20" />
+                    </div>
                   )}
                 </div>
 
-                {/* Output preview */}
-                {nodeStatus === 'completed' && stage?.output && (
-                  <NodeOutputPreview node={node} output={stage.output} />
-                )}
-                {nodeStatus === 'running' && (
-                  <p className="text-xs text-blue-500 mt-0.5 animate-pulse">
-                    {(stage?.output as any)?.message ?? 'Processing…'}
-                  </p>
-                )}
-                {nodeStatus === 'interrupted' && (
-                  <p className="text-xs text-amber-600 mt-0.5 font-medium">
-                    Human review required — awaiting decision
-                  </p>
-                )}
-                {(stage?.tokens_used ?? 0) > 0 && nodeStatus === 'completed' && (
-                  <p className="text-xs text-slate-400 mt-0.5">{stage.tokens_used} tokens</p>
-                )}
+                {/* ── Node content ── */}
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className={cn(
+                        'text-sm font-medium transition-colors',
+                        nodeStatus === 'completed'  && 'text-foreground',
+                        nodeStatus === 'running'    && 'text-indigo-300',
+                        nodeStatus === 'interrupted'&& 'text-amber-300',
+                        nodeStatus === 'failed'     && 'text-red-400',
+                        (nodeStatus === 'pending' || !stage) && 'text-muted-foreground/50',
+                      )}>
+                        {meta?.label ?? node}
+                      </p>
+                      {(nodeStatus === 'pending' || !stage) && (
+                        <p className="text-[11px] text-muted-foreground/30 mt-0.5">{meta?.desc}</p>
+                      )}
+                    </div>
+
+                    {/* Latency badge */}
+                    {(stage?.latency_ms ?? 0) > 0 && nodeStatus === 'completed' && (
+                      <span className="flex-shrink-0 font-mono text-[10px] text-muted-foreground/60 bg-white/[0.04] px-1.5 py-0.5 rounded mt-0.5">
+                        {stage!.latency_ms}ms
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Running status */}
+                  {nodeStatus === 'running' && (
+                    <p className="mt-1 text-[11px] text-indigo-400/80 animate-pulse">
+                      {(stage?.output as any)?.message ?? `Running ${meta?.desc?.toLowerCase()}…`}
+                    </p>
+                  )}
+
+                  {/* Interrupted */}
+                  {nodeStatus === 'interrupted' && (
+                    <p className="mt-1 text-[11px] text-amber-400/80 font-medium">
+                      Human review required — awaiting decision
+                    </p>
+                  )}
+
+                  {/* Completed output preview */}
+                  {nodeStatus === 'completed' && stage?.output && (
+                    <NodeOutputPreview node={node} output={stage.output} />
+                  )}
+
+                  {/* Token count */}
+                  {(stage?.tokens_used ?? 0) > 0 && nodeStatus === 'completed' && (
+                    <p className="mt-1 font-mono text-[10px] text-muted-foreground/40">
+                      {stage!.tokens_used} tokens
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </div>
   )
 }
 
+/* ── Node output preview sub-component ──────────────────────────────────── */
 function NodeOutputPreview({ node, output }: { node: string; output: Record<string, unknown> }) {
   if (node === 'classifier' && output.classification) {
     const c = output.classification as any
     return (
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        <Chip label={c.product_type?.replace(/_/g, ' ')} color="blue" />
-        <Chip label={c.issue_type?.replace(/_/g, ' ')} color="purple" />
-        <Chip label={c.severity} color={c.severity === 'CRITICAL' || c.severity === 'HIGH' ? 'red' : 'green'} />
-        <Chip label={`${Math.round(c.confidence * 100)}% confidence`} color="slate" />
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <Chip label={c.product_type?.replace(/_/g, ' ')}  color="blue"   />
+        <Chip label={c.issue_type?.replace(/_/g, ' ')}    color="purple" />
+        <Chip
+          label={c.severity}
+          color={c.severity === 'CRITICAL' ? 'red' : c.severity === 'HIGH' ? 'orange' : 'green'}
+        />
+        <Chip label={`${Math.round(c.confidence * 100)}% conf`} color="slate" />
       </div>
     )
   }
+
   if (node === 'routing') {
     return (
-      <p className="mt-1 text-xs text-slate-500">
-        Route: <span className="font-medium">{output.route as string}</span>
-        {Boolean(output.review_required) && ' — review required'}
+      <p className="mt-1.5 text-[11px] text-muted-foreground">
+        Route: <span className="text-foreground font-medium">{output.route as string}</span>
+        {Boolean(output.review_required) && (
+          <span className="ml-2 text-amber-400/80 font-medium">· escalated</span>
+        )}
       </p>
     )
   }
+
   if (node === 'root_cause' && output.root_cause) {
     return (
-      <p className="mt-1 text-xs text-slate-500 line-clamp-2">
-        {(output.root_cause as string).slice(0, 120)}…
+      <p className="mt-1.5 text-[11px] text-muted-foreground/70 line-clamp-2 leading-relaxed">
+        {(output.root_cause as string).slice(0, 130)}…
       </p>
     )
   }
+
   if (node === 'remediator' && output.assigned_team) {
     return (
-      <p className="mt-1 text-xs text-slate-500">
-        Team: <span className="font-medium">{output.assigned_team as string}</span>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">
+        Assigned: <span className="text-indigo-300 font-medium">{output.assigned_team as string}</span>
       </p>
     )
   }
+
   if (node === 'auditor') {
     const verdict = output.verdict as string
     return (
-      <p className={`mt-1 text-xs font-semibold ${verdict === 'PASS' ? 'text-emerald-600' : 'text-red-600'}`}>
-        Verdict: {verdict}
+      <p className={cn('mt-1.5 text-[11px] font-bold tracking-wide',
+        verdict === 'PASS' ? 'text-emerald-400' : 'text-red-400'
+      )}>
+        {verdict === 'PASS' ? '✓' : '✗'} Compliance verdict: {verdict}
       </p>
     )
   }
+
+  if (node === 'writer') {
+    return (
+      <p className="mt-1.5 text-[11px] text-emerald-400/80 font-medium">Response letter drafted</p>
+    )
+  }
+
+  if (node === 'explainer') {
+    return (
+      <p className="mt-1.5 text-[11px] text-indigo-400/80 font-medium">Explanation chain generated</p>
+    )
+  }
+
+  if (node === 'intake') {
+    return (
+      <p className="mt-1.5 text-[11px] text-emerald-400/80 font-medium">PII redacted · text normalized</p>
+    )
+  }
+
   return null
 }
 
+/* ── Chip sub-component ──────────────────────────────────────────────────── */
 function Chip({ label, color }: { label: string; color: string }) {
-  const colors: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-700',
-    purple: 'bg-violet-50 text-violet-700',
-    red: 'bg-red-50 text-red-700',
-    green: 'bg-emerald-50 text-emerald-700',
-    slate: 'bg-slate-100 text-slate-600',
+  const COLORS: Record<string, string> = {
+    blue:   'bg-blue-500/15 text-blue-300 border-blue-500/25',
+    purple: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
+    red:    'bg-red-500/15 text-red-300 border-red-500/25',
+    orange: 'bg-orange-500/15 text-orange-300 border-orange-500/25',
+    green:  'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
+    slate:  'bg-white/[0.06] text-muted-foreground border-white/10',
   }
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[color] ?? colors.slate}`}>
+    <span className={cn(
+      'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+      COLORS[color] ?? COLORS.slate
+    )}>
       {label}
     </span>
   )

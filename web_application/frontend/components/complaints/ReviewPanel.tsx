@@ -1,21 +1,22 @@
 'use client'
 import { useState } from 'react'
-import { CheckCircle2, XCircle, Edit3, Loader2, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, XCircle, Edit3, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { useComplaintsStore } from '@/store/complaints'
+import { cn } from '@/lib/utils'
 import type { Complaint } from '@/types'
 
 interface Props {
-  complaint: Complaint
+  complaint:   Complaint
   onReviewed?: () => void
 }
 
 export default function ReviewPanel({ complaint, onReviewed }: Props) {
   const { submitReview } = useComplaintsStore()
-  const [action, setAction] = useState<'approve' | 'edit' | 'reject' | null>(null)
-  const [notes, setNotes] = useState('')
+  const [action, setAction]       = useState<'approve' | 'edit' | 'reject' | null>(null)
+  const [notes, setNotes]         = useState('')
   const [editedText, setEditedText] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError]         = useState<string | null>(null)
 
   if (complaint.status !== 'interrupted') return null
 
@@ -39,40 +40,45 @@ export default function ReviewPanel({ complaint, onReviewed }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-6 shadow-sm">
-      {/* Alert banner */}
+    <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.04] p-6 overflow-hidden relative">
+      {/* Accent top bar */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400/80 to-amber-500/60" />
+
+      {/* ── Alert header ───────────────────────────────────── */}
       <div className="mb-5 flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-500/15 border border-amber-500/25">
+          <ShieldAlert className="h-4 w-4 text-amber-400" />
+        </div>
         <div>
-          <p className="font-semibold text-amber-900">Human Review Required</p>
-          <p className="text-sm text-amber-700 mt-0.5">
-            The AI pipeline flagged this complaint for review due to high compliance risk or low confidence.
-            Please review the classification and decide how to proceed.
+          <p className="font-semibold text-amber-300">Human Review Required</p>
+          <p className="text-sm text-amber-400/70 mt-0.5 leading-relaxed">
+            The AI pipeline flagged this complaint for review due to high compliance risk or
+            low confidence. Please review the classification below and decide how to proceed.
           </p>
         </div>
       </div>
 
-      {/* Classification summary */}
+      {/* ── Classification summary ──────────────────────────── */}
       {complaint.classification && (
-        <div className="mb-5 rounded-xl bg-white border border-amber-100 p-4 text-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">AI Classification</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-slate-700">
-            <Row label="Product" value={complaint.classification.product_type.replace(/_/g, ' ')} />
-            <Row label="Issue" value={complaint.classification.issue_type.replace(/_/g, ' ')} />
-            <Row label="Severity" value={complaint.classification.severity} />
-            <Row label="Compliance Risk" value={complaint.classification.compliance_risk} />
-            <Row label="Confidence" value={`${Math.round(complaint.classification.confidence * 100)}%`} />
+        <div className="mb-5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+          <p className="section-label mb-3">AI Classification</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+            <ClassRow label="Product"    value={complaint.classification.product_type.replace(/_/g, ' ')} />
+            <ClassRow label="Issue"      value={complaint.classification.issue_type.replace(/_/g, ' ')}   />
+            <ClassRow label="Severity"   value={complaint.classification.severity}   severity />
+            <ClassRow label="Risk"       value={complaint.classification.compliance_risk} />
+            <ClassRow label="Confidence" value={`${Math.round(complaint.classification.confidence * 100)}%`} />
           </div>
         </div>
       )}
 
-      {/* Action selection */}
-      <p className="mb-3 text-sm font-semibold text-slate-800">Your Decision</p>
-      <div className="mb-4 grid gap-2.5 sm:grid-cols-3">
+      {/* ── Action selection ────────────────────────────────── */}
+      <p className="text-xs font-semibold text-foreground/80 mb-3 uppercase tracking-wider">Your Decision</p>
+      <div className="mb-4 grid gap-2 sm:grid-cols-3">
         <ActionCard
           active={action === 'approve'}
           onClick={() => setAction('approve')}
-          icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+          icon={<CheckCircle2 className="h-4 w-4" />}
           label="Approve"
           desc="Accept AI classification and continue pipeline"
           color="emerald"
@@ -80,25 +86,25 @@ export default function ReviewPanel({ complaint, onReviewed }: Props) {
         <ActionCard
           active={action === 'edit'}
           onClick={() => setAction('edit')}
-          icon={<Edit3 className="h-5 w-5 text-blue-600" />}
+          icon={<Edit3 className="h-4 w-4" />}
           label="Edit & Continue"
           desc="Modify complaint text, then resume"
-          color="blue"
+          color="indigo"
         />
         <ActionCard
           active={action === 'reject'}
           onClick={() => setAction('reject')}
-          icon={<XCircle className="h-5 w-5 text-red-600" />}
+          icon={<XCircle className="h-4 w-4" />}
           label="Reject"
-          desc="Close this complaint without processing"
+          desc="Close complaint without processing"
           color="red"
         />
       </div>
 
-      {/* Edit text area */}
+      {/* ── Edit textarea ───────────────────────────────────── */}
       {action === 'edit' && (
         <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label className="mb-1.5 block text-xs font-semibold text-foreground/70 uppercase tracking-wider">
             Edited Complaint Text
           </label>
           <textarea
@@ -106,35 +112,43 @@ export default function ReviewPanel({ complaint, onReviewed }: Props) {
             onChange={(e) => setEditedText(e.target.value)}
             placeholder={complaint.scrubbed_text ?? 'Enter corrected complaint text…'}
             rows={5}
-            className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition resize-y"
+            className="field resize-y"
           />
         </div>
       )}
 
-      {/* Reviewer notes */}
+      {/* ── Reviewer notes ──────────────────────────────────── */}
       {action && (
         <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            Reviewer Notes (optional)
+          <label className="mb-1.5 block text-xs font-semibold text-foreground/70 uppercase tracking-wider">
+            Reviewer Notes <span className="normal-case font-normal text-muted-foreground">(optional)</span>
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add context or justification for your decision…"
             rows={3}
-            className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition resize-y"
+            className="field resize-y"
           />
         </div>
       )}
 
+      {/* ── Error ───────────────────────────────────────────── */}
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</p>
+        <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
       )}
 
+      {/* ── Submit ──────────────────────────────────────────── */}
       <button
         onClick={handleSubmit}
         disabled={!action || submitting}
-        className="flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition"
+        className={cn(
+          'btn-primary',
+          action === 'approve' && 'bg-emerald-600 hover:bg-emerald-700',
+          action === 'reject'  && 'bg-red-600/80 hover:bg-red-700',
+        )}
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {submitting ? 'Submitting…' : 'Submit Decision'}
@@ -143,11 +157,20 @@ export default function ReviewPanel({ complaint, onReviewed }: Props) {
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+/* ── Sub-components ──────────────────────────────────────────────────────── */
+function ClassRow({ label, value, severity }: { label: string; value: string; severity?: boolean }) {
+  const severityColor =
+    value === 'CRITICAL' ? 'text-red-400' :
+    value === 'HIGH'     ? 'text-orange-400' :
+    value === 'MEDIUM'   ? 'text-amber-400' :
+    value === 'LOW'      ? 'text-emerald-400' : 'text-foreground'
+
   return (
     <>
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium">{value}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={cn('text-xs font-semibold col-span-1', severity ? severityColor : 'text-foreground')}>
+        {value}
+      </span>
     </>
   )
 }
@@ -158,24 +181,37 @@ function ActionCard({
   active: boolean; onClick: () => void
   icon: React.ReactNode; label: string; desc: string; color: string
 }) {
-  const colors: Record<string, string> = {
-    emerald: 'border-emerald-400 bg-emerald-50',
-    blue: 'border-blue-400 bg-blue-50',
-    red: 'border-red-400 bg-red-50',
+  const ACTIVE: Record<string, string> = {
+    emerald: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    indigo:  'border-primary/40 bg-primary/10 text-indigo-300',
+    red:     'border-red-500/40 bg-red-500/10 text-red-300',
   }
+  const ICON: Record<string, string> = {
+    emerald: 'text-emerald-400',
+    indigo:  'text-indigo-400',
+    red:     'text-red-400',
+  }
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border-2 p-3.5 text-left transition ${
-        active ? colors[color] : 'border-slate-200 bg-white hover:border-slate-300'
-      }`}
+      className={cn(
+        'rounded-xl border p-3.5 text-left transition-all duration-200',
+        active
+          ? ACTIVE[color]
+          : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.14] hover:bg-white/[0.05]'
+      )}
     >
-      <div className="mb-1.5 flex items-center gap-2">
+      <div className={cn('mb-1.5 flex items-center gap-2', active ? ICON[color] : 'text-muted-foreground')}>
         {icon}
-        <span className="text-sm font-semibold text-slate-900">{label}</span>
+        <span className={cn('text-sm font-semibold', active ? '' : 'text-foreground')}>
+          {label}
+        </span>
       </div>
-      <p className="text-xs text-slate-500">{desc}</p>
+      <p className={cn('text-xs leading-relaxed', active ? 'opacity-80' : 'text-muted-foreground')}>
+        {desc}
+      </p>
     </button>
   )
 }

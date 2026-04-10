@@ -5,23 +5,23 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { Shield, Loader2 } from 'lucide-react'
+import { Shield, Loader2, ArrowRight, User, Mail, Lock, Eye } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 
-// Password policy mirrors backend: min 8, upper, lower, digit, special
+/* ── Password policy mirrors backend ────────────────────────────────────── */
 const passwordSchema = z
   .string()
   .min(8, 'At least 8 characters')
-  .regex(/[A-Z]/, 'Include at least one uppercase letter')
-  .regex(/[a-z]/, 'Include at least one lowercase letter')
-  .regex(/\d/, 'Include at least one digit')
-  .regex(/[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/, 'Include at least one special character')
+  .regex(/[A-Z]/, 'Must include an uppercase letter')
+  .regex(/[a-z]/, 'Must include a lowercase letter')
+  .regex(/\d/, 'Must include a digit')
+  .regex(/[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/, 'Must include a special character')
 
 const schema = z.object({
   full_name: z.string().min(1, 'Full name required').max(120),
-  email: z.string().email('Invalid email'),
-  password: passwordSchema,
-  confirm: z.string(),
+  email:     z.string().email('Invalid email address'),
+  password:  passwordSchema,
+  confirm:   z.string(),
 }).refine((d) => d.password === d.confirm, {
   message: 'Passwords do not match',
   path: ['confirm'],
@@ -40,103 +40,148 @@ export default function RegisterPage() {
   useEffect(() => { return clearError }, [])
 
   const onSubmit = async (data: FormData) => {
-    try {
-      await registerUser(data.email, data.password, data.full_name)
-    } catch { /* error shown from store */ }
+    try { await registerUser(data.email, data.password, data.full_name) }
+    catch { /* error shown from store */ }
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-blue-950 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg">
-            <Shield className="h-7 w-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Create account</h1>
-          <p className="mt-1 text-sm text-slate-400">Join FinComplaint AI</p>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4">
+      {/* Background */}
+      <div className="pointer-events-none absolute inset-0 bg-dot-grid opacity-60" />
+      <div
+        className="pointer-events-none absolute top-[-15%] left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full animate-orb-breathe"
+        style={{
+          background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.05) 45%, transparent 70%)',
+          filter: 'blur(50px)',
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-sm animate-fade-up">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <Link href="/" className="inline-flex flex-col items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/25"
+              style={{ boxShadow: '0 0 32px rgba(99,102,241,0.2)' }}>
+              <Shield className="h-7 w-7 text-primary" />
+            </div>
+            <div>
+              <p className="font-serif text-2xl text-foreground">FinComplaint AI</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Create your account</p>
+            </div>
+          </Link>
         </div>
 
-        <div className="rounded-2xl bg-white p-8 shadow-2xl">
+        {/* Card */}
+        <div className="glass-card p-8" style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)' }}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {error && (
-              <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+              <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {error}
               </div>
             )}
 
-            <Field label="Full name" error={errors.full_name?.message}>
-              <input
-                {...register('full_name')}
-                type="text"
-                autoComplete="name"
-                placeholder="Jane Smith"
-                className={inputCls}
-              />
-            </Field>
+            <FormField label="Full Name" error={errors.full_name?.message}>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+                <input
+                  {...register('full_name')}
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Jane Smith"
+                  className="field pl-9"
+                />
+              </div>
+            </FormField>
 
-            <Field label="Email" error={errors.email?.message}>
-              <input
-                {...register('email')}
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                className={inputCls}
-              />
-            </Field>
+            <FormField label="Email" error={errors.email?.message}>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+                <input
+                  {...register('email')}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  className="field pl-9"
+                />
+              </div>
+            </FormField>
 
-            <Field label="Password" error={errors.password?.message}>
-              <input
-                {...register('password')}
-                type="password"
-                autoComplete="new-password"
-                placeholder="Min 8 chars, upper, lower, digit, special"
-                className={inputCls}
-              />
-            </Field>
+            <FormField label="Password" error={errors.password?.message}>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+                <input
+                  {...register('password')}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Min 8 chars, upper, digit, special"
+                  className="field pl-9"
+                />
+              </div>
+            </FormField>
 
-            <Field label="Confirm password" error={errors.confirm?.message}>
-              <input
-                {...register('confirm')}
-                type="password"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                className={inputCls}
-              />
-            </Field>
+            <FormField label="Confirm Password" error={errors.confirm?.message}>
+              <div className="relative">
+                <Eye className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+                <input
+                  {...register('confirm')}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  className="field pl-9"
+                />
+              </div>
+            </FormField>
+
+            {/* Password hint */}
+            <p className="text-[11px] text-muted-foreground/50 leading-relaxed">
+              Password must be 8+ chars with at least one uppercase, lowercase, digit, and special character.
+            </p>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition mt-2"
+              className="btn-primary w-full py-3 mt-2"
             >
-              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isLoading ? 'Creating account…' : 'Create account'}
+              {isLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</>
+              ) : (
+                <>Create account <ArrowRight className="h-3.5 w-3.5" /></>
+              )}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-600">
+          <div className="mt-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/[0.06]" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="flex-1 h-px bg-white/[0.06]" />
+          </div>
+
+          <p className="mt-5 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-blue-600 hover:underline">
+            <Link href="/login" className="font-semibold text-primary hover:text-indigo-300 transition-colors">
               Sign in
             </Link>
           </p>
         </div>
+
+        <p className="mt-6 text-center text-[11px] text-muted-foreground/40">
+          Protected by JWT RS256 · bcrypt · Rate limiting
+        </p>
       </div>
     </div>
   )
 }
 
-const inputCls =
-  'w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition'
-
-function Field({
+function FormField({
   label, error, children,
 }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-foreground/60">
+        {label}
+      </label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
     </div>
   )
 }

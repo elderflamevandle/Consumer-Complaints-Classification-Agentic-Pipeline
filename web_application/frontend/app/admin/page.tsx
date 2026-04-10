@@ -1,54 +1,61 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, Shield, Layers, Plus, Pencil, X, Check } from 'lucide-react'
+import { Users, Shield, Layers, Plus, Pencil, X, Check, Loader2, AlertTriangle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { useAuthStore } from '@/store/auth'
 import { adminApi } from '@/lib/api-client'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import type { Team, User, AuditEvent } from '@/types'
 
 type Tab = 'users' | 'teams' | 'audit'
 
-// ── Issue type options (mirrors mock_pipeline._TEAM_MAP keys) ────────────────
-const ISSUE_TYPES = [
-  'FRAUD', 'BILLING', 'IDENTITY_THEFT',
-  'PAYMENT', 'CREDIT_REPORTING', 'CUSTOMER_SERVICE',
-]
-const PRODUCT_TYPES = [
-  'CREDIT_CARD', 'MORTGAGE', 'LOAN',
-  'BANK_ACCOUNT', 'DEBT_COLLECTION', 'MONEY_TRANSFER',
+const ISSUE_TYPES   = ['FRAUD','BILLING','IDENTITY_THEFT','PAYMENT','CREDIT_REPORTING','CUSTOMER_SERVICE']
+const PRODUCT_TYPES = ['CREDIT_CARD','MORTGAGE','LOAN','BANK_ACCOUNT','DEBT_COLLECTION','MONEY_TRANSFER']
+
+const ROUTING_REF = [
+  { issue: 'FRAUD',           slug: 'fraud-security' },
+  { issue: 'BILLING',         slug: 'billing-resolution' },
+  { issue: 'IDENTITY_THEFT',  slug: 'identity-protection' },
+  { issue: 'PAYMENT',         slug: 'payments-ops' },
+  { issue: 'CREDIT_REPORTING',slug: 'credit-bureau' },
+  { issue: 'CUSTOMER_SERVICE',slug: 'cx-escalations' },
 ]
 
-// ── Helper to generate a slug from a name ────────────────────────────────────
 function toSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+const TAB_ICONS = {
+  users: <Users className="h-4 w-4" />,
+  teams: <Layers className="h-4 w-4" />,
+  audit: <Shield className="h-4 w-4" />,
 }
 
 export default function AdminPage() {
   const router = useRouter()
   const { user, isAuthenticated, loadUser } = useAuthStore()
-  const [users, setUsers] = useState<User[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
+  const [users, setUsers]             = useState<User[]>([])
+  const [teams, setTeams]             = useState<Team[]>([])
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('users')
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading]         = useState(true)
+  const [activeTab, setActiveTab]     = useState<Tab>('users')
+  const [pageError, setPageError]     = useState<string | null>(null)
 
-  // ── Team form state ─────────────────────────────────────────────────────────
-  const [showTeamForm, setShowTeamForm] = useState(false)
-  const [teamFormMode, setTeamFormMode] = useState<'create' | 'edit'>('create')
-  const [editingTeamId, setEditingTeamId] = useState<string | null>(null)
-  const [teamName, setTeamName] = useState('')
-  const [teamSlug, setTeamSlug] = useState('')
-  const [teamDesc, setTeamDesc] = useState('')
-  const [teamIssueTypes, setTeamIssueTypes] = useState<string[]>([])
+  // Team form state
+  const [showTeamForm, setShowTeamForm]       = useState(false)
+  const [teamFormMode, setTeamFormMode]       = useState<'create' | 'edit'>('create')
+  const [editingTeamId, setEditingTeamId]     = useState<string | null>(null)
+  const [teamName, setTeamName]               = useState('')
+  const [teamSlug, setTeamSlug]               = useState('')
+  const [teamDesc, setTeamDesc]               = useState('')
+  const [teamIssueTypes, setTeamIssueTypes]   = useState<string[]>([])
   const [teamProductTypes, setTeamProductTypes] = useState<string[]>([])
-  const [teamFormError, setTeamFormError] = useState<string | null>(null)
+  const [teamFormError, setTeamFormError]     = useState<string | null>(null)
   const [teamFormLoading, setTeamFormLoading] = useState(false)
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadUser().then(() => {
       const s = useAuthStore.getState()
@@ -57,30 +64,24 @@ export default function AdminPage() {
     })
   }, [])
 
-  // ── Load data ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'admin') return
-    Promise.all([
-      adminApi.users(100),
-      adminApi.listTeams(),
-      adminApi.systemAudit(50),
-    ]).then(([uRes, tRes, aRes]) => {
-      setUsers((uRes.data as any).items)
-      setTeams((tRes.data as any).items)
-      setAuditEvents((aRes.data as any).events)
-    }).catch(() => setError('Failed to load admin data'))
+    Promise.all([adminApi.users(100), adminApi.listTeams(), adminApi.systemAudit(50)])
+      .then(([uRes, tRes, aRes]) => {
+        setUsers((uRes.data as any).items)
+        setTeams((tRes.data as any).items)
+        setAuditEvents((aRes.data as any).events)
+      })
+      .catch(() => setPageError('Failed to load admin data'))
       .finally(() => setLoading(false))
   }, [isAuthenticated, user])
 
-  // ── User actions ────────────────────────────────────────────────────────────
   const handleRoleChange = async (userId: string, role: string) => {
     if (!confirm(`Change role to "${role}"?`)) return
     try {
       await adminApi.changeRole(userId, role)
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: role as any } : u))
-    } catch {
-      setError('Failed to change role')
-    }
+    } catch { setPageError('Failed to change role') }
   }
 
   const handleToggleActive = async (u: User) => {
@@ -89,9 +90,7 @@ export default function AdminPage() {
       if (u.is_active) await adminApi.deactivate(u.id)
       else await adminApi.activate(u.id)
       setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: !x.is_active } : x))
-    } catch {
-      setError('Failed to update user status')
-    }
+    } catch { setPageError('Failed to update user') }
   }
 
   const handleAssignTeam = async (userId: string, teamId: string) => {
@@ -99,50 +98,35 @@ export default function AdminPage() {
       const res = await adminApi.assignTeam(userId, teamId || null)
       const updated = res.data as User
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, team_id: updated.team_id, team_name: updated.team_name } : u))
-    } catch {
-      setError('Failed to assign team')
-    }
+    } catch { setPageError('Failed to assign team') }
   }
 
-  // ── Team form helpers ───────────────────────────────────────────────────────
   const openCreateTeam = () => {
-    setTeamFormMode('create')
-    setEditingTeamId(null)
+    setTeamFormMode('create'); setEditingTeamId(null)
     setTeamName(''); setTeamSlug(''); setTeamDesc('')
     setTeamIssueTypes([]); setTeamProductTypes([])
-    setTeamFormError(null)
-    setShowTeamForm(true)
+    setTeamFormError(null); setShowTeamForm(true)
   }
 
   const openEditTeam = (t: Team) => {
-    setTeamFormMode('edit')
-    setEditingTeamId(t.id)
+    setTeamFormMode('edit'); setEditingTeamId(t.id)
     setTeamName(t.name); setTeamSlug(t.slug); setTeamDesc(t.description)
     setTeamIssueTypes([...t.issue_types]); setTeamProductTypes([...t.product_types])
-    setTeamFormError(null)
-    setShowTeamForm(true)
+    setTeamFormError(null); setShowTeamForm(true)
   }
 
   const handleTeamSubmit = async () => {
     setTeamFormError(null)
     if (!teamName.trim()) { setTeamFormError('Team name is required'); return }
     if (!teamSlug.trim()) { setTeamFormError('Slug is required'); return }
-    if (!/^[a-z0-9-]+$/.test(teamSlug)) { setTeamFormError('Slug must be lowercase letters, numbers, and hyphens only'); return }
-
+    if (!/^[a-z0-9-]+$/.test(teamSlug)) { setTeamFormError('Slug: lowercase, numbers, hyphens only'); return }
     setTeamFormLoading(true)
     try {
       if (teamFormMode === 'create') {
-        await adminApi.createTeam({
-          name: teamName, slug: teamSlug, description: teamDesc,
-          issue_types: teamIssueTypes, product_types: teamProductTypes,
-        })
+        await adminApi.createTeam({ name: teamName, slug: teamSlug, description: teamDesc, issue_types: teamIssueTypes, product_types: teamProductTypes })
       } else if (editingTeamId) {
-        await adminApi.updateTeam(editingTeamId, {
-          name: teamName, description: teamDesc,
-          issue_types: teamIssueTypes, product_types: teamProductTypes,
-        })
+        await adminApi.updateTeam(editingTeamId, { name: teamName, description: teamDesc, issue_types: teamIssueTypes, product_types: teamProductTypes })
       }
-      // Refresh teams
       const tRes = await adminApi.listTeams()
       setTeams((tRes.data as any).items)
       setShowTeamForm(false)
@@ -153,97 +137,118 @@ export default function AdminPage() {
     }
   }
 
-  const toggleCheckbox = (
-    value: string,
-    list: string[],
-    setter: (v: string[]) => void,
-  ) => {
+  const toggleCheckbox = (value: string, list: string[], setter: (v: string[]) => void) => {
     setter(list.includes(value) ? list.filter((x) => x !== value) : [...list, value])
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex items-center justify-center py-32 text-slate-400">Loading…</div>
+      <div className="flex items-center justify-center py-32 gap-3 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">Loading admin data…</span>
+      </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Admin</h1>
-          <p className="text-sm text-slate-500">User management, teams, and system audit log</p>
+
+        {/* ── Header ────────────────────────────────────────── */}
+        <div className="mb-7 animate-fade-up">
+          <h1 className="font-serif text-3xl text-foreground">Admin Console</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            User management · Team RBAC · System audit log
+          </p>
         </div>
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex justify-between">
-            {error}
-            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700"><X className="h-4 w-4" /></button>
+        {/* ── Page error ────────────────────────────────────── */}
+        {pageError && (
+          <div className="mb-5 flex items-center gap-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <span className="flex-1">{pageError}</span>
+            <button onClick={() => setPageError(null)}>
+              <X className="h-4 w-4 opacity-60 hover:opacity-100" />
+            </button>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="mb-6 flex gap-1 rounded-xl bg-slate-100 p-1 w-fit">
+        {/* ── Tabs ──────────────────────────────────────────── */}
+        <div className="mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-card p-1 w-fit animate-fade-up delay-75">
           {(['users', 'teams', 'audit'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                activeTab === tab ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200',
+                activeTab === tab
+                  ? 'bg-primary/15 text-primary border border-primary/25'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
+              )}
             >
-              {tab === 'users' && <Users className="h-4 w-4" />}
-              {tab === 'teams' && <Layers className="h-4 w-4" />}
-              {tab === 'audit' && <Shield className="h-4 w-4" />}
+              {TAB_ICONS[tab]}
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
 
-        {/* ── USERS TAB ─────────────────────────────────────────────────────── */}
+        {/* ═════════════════════════════════════════════════════
+            USERS TAB
+            ════════════════════════════════════════════════════ */}
         {activeTab === 'users' && (
-          <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
-              <h2 className="font-semibold text-slate-900">Users ({users.length})</h2>
+          <div className="glass-card overflow-hidden animate-fade-up delay-150">
+            <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Users</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{users.length} registered accounts</p>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3 text-left">User</th>
-                    <th className="px-4 py-3 text-left">Role</th>
-                    <th className="px-4 py-3 text-left">Team</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">Last Login</th>
-                    <th className="px-4 py-3 text-left">Actions</th>
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-white/[0.04]">
+                    {['User', 'Role', 'Team', 'Status', 'Last Login', 'Actions'].map((h) => (
+                      <th key={h} className="px-5 py-3 text-left">
+                        <span className="section-label">{h}</span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-white/[0.04]">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50 transition">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-900">{u.full_name}</p>
-                        <p className="text-xs text-slate-400">{u.email}</p>
+                    <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 border border-primary/20">
+                            <span className="text-[10px] font-bold text-primary uppercase">
+                              {u.full_name.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{u.full_name}</p>
+                            <p className="font-mono text-[10px] text-muted-foreground">{u.email}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3.5">
                         <select
                           value={u.role}
                           disabled={u.id === user?.id}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50"
+                          className="field py-1 px-2 text-xs w-28 disabled:opacity-40 bg-card"
                         >
                           <option value="admin">Admin</option>
                           <option value="analyst">Analyst</option>
                           <option value="viewer">Viewer</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3.5">
                         <select
                           value={u.team_id ?? ''}
                           onChange={(e) => handleAssignTeam(u.id, e.target.value)}
-                          className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-200 max-w-[180px]"
+                          className="field py-1 px-2 text-xs w-44 bg-card"
                         >
                           <option value="">— Unassigned —</option>
                           {teams.filter((t) => t.is_active).map((t) => (
@@ -251,17 +256,22 @@ export default function AdminPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3.5">
                         <Badge variant={u.is_active ? 'success' : 'secondary'}>
                           {u.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-400">{formatDate(u.last_login_at)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3.5 font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+                        {formatDate(u.last_login_at)}
+                      </td>
+                      <td className="px-5 py-3.5">
                         {u.id !== user?.id && (
                           <button
                             onClick={() => handleToggleActive(u)}
-                            className="text-xs font-medium text-blue-600 hover:underline"
+                            className={cn(
+                              'text-xs font-medium transition-colors',
+                              u.is_active ? 'text-red-400 hover:text-red-300' : 'text-emerald-400 hover:text-emerald-300'
+                            )}
                           >
                             {u.is_active ? 'Deactivate' : 'Activate'}
                           </button>
@@ -275,34 +285,35 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── TEAMS TAB ─────────────────────────────────────────────────────── */}
+        {/* ═════════════════════════════════════════════════════
+            TEAMS TAB
+            ════════════════════════════════════════════════════ */}
         {activeTab === 'teams' && (
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-              <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+          <div className="space-y-5 animate-fade-up delay-150">
+
+            {/* Team list */}
+            <div className="glass-card overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
                 <div>
-                  <h2 className="font-semibold text-slate-900">Teams ({teams.length})</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Complaints are auto-routed to teams based on their issue types
+                  <h2 className="text-sm font-semibold text-foreground">Teams</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Complaints auto-route to teams based on issue type
                   </p>
                 </div>
-                <button
-                  onClick={openCreateTeam}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition"
-                >
+                <button onClick={openCreateTeam} className="btn-primary py-1.5 px-3 text-xs">
                   <Plus className="h-3.5 w-3.5" /> New Team
                 </button>
               </div>
 
-              {/* Team form modal inline */}
+              {/* Inline form */}
               {showTeamForm && (
-                <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-4">
-                    {teamFormMode === 'create' ? 'Create Team' : 'Edit Team'}
+                <div className="border-b border-white/[0.06] bg-white/[0.02] px-5 py-5">
+                  <h3 className="mb-4 text-sm font-semibold text-foreground">
+                    {teamFormMode === 'create' ? 'Create New Team' : 'Edit Team'}
                   </h3>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Team Name *</label>
+                      <label className="section-label mb-1.5 block">Team Name *</label>
                       <input
                         value={teamName}
                         onChange={(e) => {
@@ -310,48 +321,48 @@ export default function AdminPage() {
                           if (teamFormMode === 'create') setTeamSlug(toSlug(e.target.value))
                         }}
                         placeholder="e.g. Fraud & Security Operations"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        className="field text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                      <label className="section-label mb-1.5 block">
                         Slug *
-                        <span className="ml-1 font-normal text-slate-400">(lowercase, hyphens only — used for auto-routing)</span>
+                        <span className="ml-1 normal-case font-normal text-muted-foreground/60">— used for auto-routing</span>
                       </label>
                       <input
                         value={teamSlug}
                         onChange={(e) => setTeamSlug(e.target.value)}
                         disabled={teamFormMode === 'edit'}
                         placeholder="e.g. fraud-security"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-slate-100 disabled:text-slate-400"
+                        className="field text-sm font-mono disabled:opacity-40"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                      <label className="section-label mb-1.5 block">Description</label>
                       <input
                         value={teamDesc}
                         onChange={(e) => setTeamDesc(e.target.value)}
-                        placeholder="Brief description of this team's responsibilities"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        placeholder="Brief description of this team's scope"
+                        className="field text-sm"
                       />
                     </div>
 
                     {/* Issue types */}
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-2">
-                        Issue Types (auto-routing)
-                        <span className="ml-1 font-normal text-slate-400">— pipeline routes complaints to this team</span>
+                      <label className="section-label mb-2 block">
+                        Issue Types
+                        <span className="ml-1 normal-case font-normal text-muted-foreground/60">— auto-routing triggers</span>
                       </label>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-2">
                         {ISSUE_TYPES.map((it) => (
-                          <label key={it} className="flex items-center gap-2 cursor-pointer text-xs">
+                          <label key={it} className="flex cursor-pointer items-center gap-2 text-xs">
                             <input
                               type="checkbox"
                               checked={teamIssueTypes.includes(it)}
                               onChange={() => toggleCheckbox(it, teamIssueTypes, setTeamIssueTypes)}
-                              className="rounded border-slate-300"
+                              className="rounded border-white/20 bg-input checked:bg-primary"
                             />
-                            <span className="text-slate-700">{it.replace(/_/g, ' ')}</span>
+                            <span className="text-foreground/80">{it.replace(/_/g, ' ')}</span>
                           </label>
                         ))}
                       </div>
@@ -359,17 +370,17 @@ export default function AdminPage() {
 
                     {/* Product types */}
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-2">Product Types (informational)</label>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <label className="section-label mb-2 block">Product Types (informational)</label>
+                      <div className="grid grid-cols-2 gap-2">
                         {PRODUCT_TYPES.map((pt) => (
-                          <label key={pt} className="flex items-center gap-2 cursor-pointer text-xs">
+                          <label key={pt} className="flex cursor-pointer items-center gap-2 text-xs">
                             <input
                               type="checkbox"
                               checked={teamProductTypes.includes(pt)}
                               onChange={() => toggleCheckbox(pt, teamProductTypes, setTeamProductTypes)}
-                              className="rounded border-slate-300"
+                              className="rounded border-white/20 bg-input checked:bg-primary"
                             />
-                            <span className="text-slate-700">{pt.replace(/_/g, ' ')}</span>
+                            <span className="text-foreground/80">{pt.replace(/_/g, ' ')}</span>
                           </label>
                         ))}
                       </div>
@@ -377,21 +388,24 @@ export default function AdminPage() {
                   </div>
 
                   {teamFormError && (
-                    <p className="mt-3 text-xs text-red-600">{teamFormError}</p>
+                    <p className="mt-3 text-xs text-red-400">{teamFormError}</p>
                   )}
 
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={handleTeamSubmit}
                       disabled={teamFormLoading}
-                      className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition"
+                      className="btn-primary py-2 px-4 text-xs"
                     >
-                      <Check className="h-3.5 w-3.5" />
-                      {teamFormLoading ? 'Saving…' : teamFormMode === 'create' ? 'Create Team' : 'Save Changes'}
+                      {teamFormLoading ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
+                      ) : (
+                        <><Check className="h-3.5 w-3.5" />{teamFormMode === 'create' ? 'Create Team' : 'Save Changes'}</>
+                      )}
                     </button>
                     <button
                       onClick={() => setShowTeamForm(false)}
-                      className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 transition"
+                      className="btn-outline py-2 px-4 text-xs"
                     >
                       Cancel
                     </button>
@@ -399,75 +413,72 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Team list */}
-              <div className="divide-y divide-slate-50">
-                {teams.length === 0 && (
-                  <div className="px-6 py-8 text-center text-sm text-slate-400">
-                    No teams yet. Click "New Team" to create one.
+              {/* Teams list */}
+              <div className="divide-y divide-white/[0.04]">
+                {teams.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <p className="text-sm text-muted-foreground">No teams yet.</p>
+                    <button onClick={openCreateTeam} className="btn-primary mt-4 py-2 px-4 text-xs">
+                      Create first team
+                    </button>
                   </div>
-                )}
-                {teams.map((t) => (
-                  <div key={t.id} className="px-6 py-4 flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-slate-900 text-sm">{t.name}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-500">
-                          {t.slug}
-                        </span>
-                        {!t.is_active && (
-                          <Badge variant="secondary">Inactive</Badge>
-                        )}
-                      </div>
-                      {t.description && (
-                        <p className="mt-0.5 text-xs text-slate-400">{t.description}</p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {t.issue_types.map((it) => (
-                          <span key={it} className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                            {it.replace(/_/g, ' ')}
+                ) : (
+                  teams.map((t) => (
+                    <div key={t.id} className="flex items-start gap-5 px-5 py-4 hover:bg-white/[0.02] transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-foreground">{t.name}</span>
+                          <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                            {t.slug}
                           </span>
-                        ))}
-                        {t.issue_types.length === 0 && (
-                          <span className="text-xs text-amber-600">⚠ No issue types — auto-routing disabled</span>
+                          {!t.is_active && <Badge variant="secondary">Inactive</Badge>}
+                        </div>
+                        {t.description && (
+                          <p className="text-xs text-muted-foreground mb-2">{t.description}</p>
                         )}
+                        <div className="flex flex-wrap gap-1.5">
+                          {t.issue_types.length === 0 ? (
+                            <span className="text-[11px] text-amber-400/80">⚠ No issue types — auto-routing disabled</span>
+                          ) : (
+                            t.issue_types.map((it) => (
+                              <span key={it} className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                                {it.replace(/_/g, ' ')}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="text-right">
+                          <p className="font-serif text-xl text-foreground">{t.member_count}</p>
+                          <p className="text-[10px] text-muted-foreground">members</p>
+                        </div>
+                        <button
+                          onClick={() => openEditTeam(t)}
+                          className="btn-outline py-1.5 px-3 text-xs"
+                        >
+                          <Pencil className="h-3 w-3" /> Edit
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-slate-900">{t.member_count}</p>
-                        <p className="text-xs text-slate-400">members</p>
-                      </div>
-                      <button
-                        onClick={() => openEditTeam(t)}
-                        className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Edit
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
             {/* Auto-routing reference */}
-            <div className="rounded-2xl bg-amber-50 border border-amber-200 px-6 py-4">
-              <p className="text-sm font-semibold text-amber-800 mb-1">Auto-routing reference</p>
-              <p className="text-xs text-amber-700 mb-3">
-                The pipeline automatically routes complaints to teams based on the detected issue type.
-                Create teams using the slugs below so complaints are assigned correctly.
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {[
-                  { issue: 'FRAUD', slug: 'fraud-security' },
-                  { issue: 'BILLING', slug: 'billing-resolution' },
-                  { issue: 'IDENTITY_THEFT', slug: 'identity-protection' },
-                  { issue: 'PAYMENT', slug: 'payments-ops' },
-                  { issue: 'CREDIT_REPORTING', slug: 'credit-bureau' },
-                  { issue: 'CUSTOMER_SERVICE', slug: 'cx-escalations' },
-                ].map(({ issue, slug }) => (
-                  <div key={slug} className="rounded-lg bg-white border border-amber-100 px-3 py-2 text-xs">
-                    <p className="font-semibold text-slate-700">{issue.replace(/_/g, ' ')}</p>
-                    <p className="font-mono text-slate-400">{slug}</p>
+            <div className="glass-card overflow-hidden">
+              <div className="border-b border-white/[0.06] px-5 py-4">
+                <h3 className="text-sm font-semibold text-foreground">Auto-routing Reference</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Create teams using these slugs for the pipeline to route complaints automatically
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-0 sm:grid-cols-3 divide-x divide-y divide-white/[0.04]">
+                {ROUTING_REF.map(({ issue, slug }) => (
+                  <div key={slug} className="px-4 py-3.5">
+                    <p className="text-xs font-semibold text-foreground/80">{issue.replace(/_/g, ' ')}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-primary/70">{slug}</p>
                   </div>
                 ))}
               </div>
@@ -475,35 +486,48 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── AUDIT TAB ─────────────────────────────────────────────────────── */}
+        {/* ═════════════════════════════════════════════════════
+            AUDIT TAB
+            ════════════════════════════════════════════════════ */}
         {activeTab === 'audit' && (
-          <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4">
-              <h2 className="font-semibold text-slate-900">System Audit Log</h2>
+          <div className="glass-card overflow-hidden animate-fade-up delay-150">
+            <div className="border-b border-white/[0.06] px-5 py-4">
+              <h2 className="text-sm font-semibold text-foreground">System Audit Log</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{auditEvents.length} recent events</p>
             </div>
-            <div className="divide-y divide-slate-50 text-sm">
-              {auditEvents.map((ev) => (
-                <div key={ev.id} className="flex items-start gap-4 px-6 py-3">
-                  <span className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${
-                    ev.action.startsWith('TEAM_') ? 'bg-purple-100 text-purple-700' :
-                    ev.action.startsWith('USER_') ? 'bg-blue-100 text-blue-700' :
-                    ev.action.startsWith('PIPELINE_') ? 'bg-green-100 text-green-700' :
-                    ev.action.startsWith('COMPLAINT_') ? 'bg-orange-100 text-orange-700' :
-                    'bg-slate-100 text-slate-600'
-                  }`}>
-                    {ev.action.split('_').slice(0, 2).join('_')}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-700">{ev.action.replace(/_/g, ' ')}</p>
-                    {ev.entity_id && (
-                      <p className="text-xs text-slate-400">entity: {ev.entity_id.slice(0, 12)}…</p>
-                    )}
+            <div className="divide-y divide-white/[0.04]">
+              {auditEvents.length === 0 ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">No audit events</div>
+              ) : auditEvents.map((ev) => {
+                const category = ev.action.split('_')[0]
+                const COLORS: Record<string, string> = {
+                  TEAM:      'bg-violet-500/15 text-violet-400 border-violet-500/25',
+                  USER:      'bg-primary/15 text-indigo-400 border-primary/25',
+                  PIPELINE:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+                  COMPLAINT: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+                }
+                return (
+                  <div key={ev.id} className="flex items-start gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+                    <span className={cn(
+                      'mt-0.5 inline-flex flex-shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide',
+                      COLORS[category] ?? 'bg-white/[0.06] text-muted-foreground border-white/10'
+                    )}>
+                      {category}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground/80">{ev.action.replace(/_/g, ' ')}</p>
+                      {ev.entity_id && (
+                        <p className="font-mono text-[10px] text-muted-foreground/60">
+                          entity: {ev.entity_id.slice(0, 16)}…
+                        </p>
+                      )}
+                    </div>
+                    <span className="flex-shrink-0 font-mono text-[10px] text-muted-foreground/50 whitespace-nowrap">
+                      {formatDate(ev.timestamp)}
+                    </span>
                   </div>
-                  <span className="text-xs text-slate-400 flex-shrink-0 whitespace-nowrap">
-                    {formatDate(ev.timestamp)}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

@@ -2,176 +2,284 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design-token CSS variables ────────────────────────────────────────────────
-   These map to the hsl(var(--*)) references in tailwind.config.js.
-   Values use the HSL channel format "H S% L%" (no hsl() wrapper) so Tailwind
-   can inject opacity modifiers: bg-primary/50, text-muted-foreground, etc.
- ─────────────────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   OBSIDIAN INTELLIGENCE — Design Token System
+   Dark-first. Electric indigo accent. Instrument Serif + DM Sans + DM Mono.
+   ─────────────────────────────────────────────────────────────────────────── */
+
 @layer base {
   :root {
-    /* Neutral surfaces */
-    --background:         210 40% 98%;   /* slate-50 equivalent */
-    --foreground:         222 47% 11%;   /* slate-900 */
+    /* ── Background levels ──────────────────────────────────── */
+    --background:  235 32% 4%;     /* #07071A  page floor       */
+    --card:        235 28% 7%;     /* #0C0C1D  card surface     */
+    --surface:     235 24% 11%;    /* #131328  elevated surface  */
 
-    /* Card / panel */
-    --card:               0 0% 100%;
-    --card-foreground:    222 47% 11%;
+    /* ── Foreground ─────────────────────────────────────────── */
+    --foreground:         215 28% 93%;   /* #ECF1F9  primary text  */
+    --card-foreground:    215 28% 93%;
+    --muted-foreground:   215 14% 55%;   /* #8A94A6  secondary     */
 
-    /* Primary — blue-600 family */
-    --primary:            221 83% 53%;
+    /* ── Accent (electric indigo) ───────────────────────────── */
+    --primary:            239 84% 67%;   /* #6366F1               */
     --primary-foreground: 0 0% 100%;
+    --accent:             239 84% 67%;
+    --accent-foreground:  215 28% 93%;
+    --ring:               239 84% 67%;
 
-    /* Secondary — slate-100 family */
-    --secondary:          210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    /* ── Secondary / muted surfaces ────────────────────────── */
+    --secondary:          235 20% 14%;
+    --secondary-foreground: 215 14% 72%;
+    --muted:              235 18% 12%;
 
-    /* Muted — slate-400 family */
-    --muted:              210 40% 93%;
-    --muted-foreground:   215 16% 47%;
-
-    /* Accent — blue-50 family */
-    --accent:             214 95% 93%;
-    --accent-foreground:  221 83% 40%;
-
-    /* Destructive — red-500 */
-    --destructive:        0 84% 60%;
+    /* ── Semantic ───────────────────────────────────────────── */
+    --destructive:        0  72% 65%;    /* red-400 on dark    */
     --destructive-foreground: 0 0% 100%;
+    --success:            160 84% 39%;   /* emerald-500         */
+    --warning:            38  92% 50%;   /* amber-500           */
 
-    /* Chrome */
-    --border:             214 32% 91%;
-    --input:              214 32% 91%;
-    --ring:               221 83% 53%;
+    /* ── Chrome ─────────────────────────────────────────────── */
+    --border:  235 20% 13%;
+    --input:   235 22% 12%;
 
-    /* Border radius scale (used in tailwind.config borderRadius) */
-    --radius: 0.5rem;
-  }
-
-  /* Dark-mode tokens — activated via <html class="dark"> */
-  .dark {
-    --background:         222 47% 11%;
-    --foreground:         210 40% 98%;
-
-    --card:               222 47% 14%;
-    --card-foreground:    210 40% 98%;
-
-    --primary:            217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary:          217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted:              217 33% 17%;
-    --muted-foreground:   215 20% 65%;
-
-    --accent:             217 33% 20%;
-    --accent-foreground:  217 91% 70%;
-
-    --destructive:        0 63% 31%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border:             217 33% 17%;
-    --input:              217 33% 17%;
-    --ring:               217 91% 60%;
+    /* ── Border-radius scale ────────────────────────────────── */
+    --radius: 0.625rem;
   }
 }
 
-/* ── Base resets ────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE RESETS
+   ─────────────────────────────────────────────────────────────────────────── */
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
 
   html {
     @apply h-full scroll-smooth;
-    -webkit-font-smoothing: antialiased;
+    -webkit-font-smoothing:  antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply h-full bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply h-full bg-background text-foreground font-sans;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 
-  /* Sensible focus ring for keyboard navigation */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-primary/50 ring-offset-1 ring-offset-background;
   }
 
-  /* Smooth scrollbar for Webkit */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-border;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/40;
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { border-radius: 99px; background: rgba(255,255,255,0.1); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+  ::selection {
+    background: rgba(99,102,241,0.35);
+    color: #fff;
   }
 }
 
-/* ── Reusable component layer ──────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   COMPONENT LAYER
+   ─────────────────────────────────────────────────────────────────────────── */
 @layer components {
-  /* Form inputs */
-  .input-base {
-    @apply w-full rounded-lg border border-input bg-white px-3 py-2 text-sm
-           text-foreground placeholder:text-muted-foreground
-           focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent
-           disabled:cursor-not-allowed disabled:opacity-50
-           transition-colors duration-150;
+
+  /* ── Glass cards ─────────────────────────────────────────── */
+  .glass-card {
+    @apply rounded-2xl border border-white/[0.07] bg-card shadow-card;
   }
 
-  /* Generic card shell */
-  .card-shell {
-    @apply rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden;
+  .glass-card-interactive {
+    @apply glass-card cursor-pointer
+           transition-all duration-300 ease-out
+           hover:border-primary/25 hover:shadow-card-hover hover:-translate-y-px;
   }
 
-  /* Section heading inside a card */
-  .section-header {
-    @apply border-b border-slate-100 px-6 py-3.5 text-sm font-semibold text-slate-700;
+  /* ── Form fields ─────────────────────────────────────────── */
+  .field {
+    @apply w-full rounded-xl border border-white/[0.08] bg-input
+           px-3.5 py-2.5 text-sm text-foreground
+           placeholder:text-muted-foreground
+           focus:outline-none focus:ring-2 focus:ring-primary/40
+           focus:border-primary/50
+           disabled:cursor-not-allowed disabled:opacity-40
+           transition-all duration-200;
   }
 
-  /* Monospace output blocks (explanation, logs) */
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           bg-primary px-5 py-2.5 text-sm font-semibold text-white
+           hover:bg-[#5153d8] active:scale-[0.97]
+           focus:outline-none focus:ring-2 focus:ring-primary/50
+           focus:ring-offset-1 focus:ring-offset-background
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200;
+    box-shadow: 0 0 14px rgba(99,102,241,0.22);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           px-4 py-2 text-sm font-medium text-muted-foreground
+           hover:bg-white/[0.06] hover:text-foreground active:scale-[0.97]
+           transition-all duration-200;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           border border-white/[0.1] px-4 py-2 text-sm font-medium text-foreground
+           hover:bg-white/[0.05] hover:border-white/[0.18] active:scale-[0.97]
+           transition-all duration-200;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           bg-red-500/10 border border-red-500/30 px-4 py-2 text-sm font-medium
+           text-red-400 hover:bg-red-500/20 active:scale-[0.97]
+           transition-all duration-200;
+  }
+
+  /* ── Typography ─────────────────────────────────────────── */
+  .section-label {
+    @apply text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  .page-title {
+    @apply font-serif text-3xl font-normal text-foreground leading-tight;
+  }
+
+  /* ── Code/mono block ────────────────────────────────────── */
   .output-block {
-    @apply whitespace-pre-wrap rounded-lg border border-slate-100 bg-slate-50
-           p-4 text-xs leading-relaxed font-mono text-slate-600 overflow-x-auto;
+    @apply whitespace-pre-wrap rounded-xl border border-white/[0.06]
+           bg-black/40 p-4 text-xs leading-relaxed font-mono
+           text-slate-300 overflow-x-auto;
   }
 
-  /* Pill badge for pipeline node states */
-  .node-badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  /* ── Skeleton loading ───────────────────────────────────── */
+  .skeleton {
+    @apply rounded-lg bg-white/[0.05] overflow-hidden relative;
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
   }
 
-  /* Fade-in entry animation */
-  .animate-enter {
-    @apply animate-fade-in;
+  /* ── Pipeline track ─────────────────────────────────────── */
+  .pipeline-track-bg {
+    position: absolute;
+    left: 11px;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .pipeline-track-fill {
+    position: absolute;
+    left: 11px;
+    top: 20px;
+    width: 2px;
+    border-radius: 99px;
+    background: linear-gradient(to bottom, #6366F1, #34D399);
+    box-shadow: 0 0 10px rgba(99,102,241,0.5);
+    transition: height 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  /* ── Node pulse ring ────────────────────────────────────── */
+  .node-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: 9999px;
+    border: 2px solid rgba(99,102,241,0.5);
+    animation: glow-pulse 2.5s ease-in-out infinite;
+  }
+
+  /* ── Animate entries ────────────────────────────────────── */
+  .animate-enter { @apply animate-fade-up; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   UTILITY LAYER
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .scrollbar-none  { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  /* Gradient text */
+  .text-gradient-indigo {
+    background: linear-gradient(135deg, #818CF8 0%, #A78BFA 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-gradient-white {
+    background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.55) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .border-glow-indigo {
+    box-shadow: 0 0 0 1px rgba(99,102,241,0.35), 0 0 24px rgba(99,102,241,0.1);
+  }
+
+  .line-clamp-1 { -webkit-line-clamp: 1; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+  .line-clamp-2 { -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+  .line-clamp-3 { -webkit-line-clamp: 3; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Stagger delays */
+  .delay-75  { animation-delay:  75ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-225 { animation-delay: 225ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+
+  /* Subtle dot-grid background */
+  .bg-dot-grid {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Subtle line-grid */
+  .bg-line-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Radial vignette */
+  .vignette-bottom {
+    background: linear-gradient(to bottom, transparent 50%, hsl(235,32%,4%) 100%);
   }
 }
 
-/* ── Utility overrides ──────────────────────────────────────────────────────── */
-@layer utilities {
-  /* Hide scrollbar while keeping scroll functionality */
-  .scrollbar-none {
-    scrollbar-width: none;
-  }
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Text truncation with configurable line count */
-  .line-clamp-2 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-  .line-clamp-3 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
+/* ─────────────────────────────────────────────────────────────────────────────
+   RECHARTS DARK OVERRIDES
+   ─────────────────────────────────────────────────────────────────────────── */
+.recharts-cartesian-axis-tick-value {
+  fill: #8A94A6 !important;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255,255,255,0.04) !important;
+}
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #0C0C1D !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+}
+.recharts-default-tooltip .recharts-tooltip-label {
+  color: #ECF1F9 !important;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+.recharts-default-tooltip .recharts-tooltip-item {
+  color: #8A94A6 !important;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }

@@ -4,8 +4,9 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, CheckCircle2, AlertCircle, Clock, ChevronDown, ChevronUp,
-  FileText, Shield, BarChart3, Loader2,
+  FileText, Shield, BarChart3, Loader2, Cpu,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import Navbar from '@/components/layout/Navbar'
 import PipelineView from '@/components/complaints/PipelineView'
 import ReviewPanel from '@/components/complaints/ReviewPanel'
@@ -16,8 +17,8 @@ import { useComplaintDetail } from '@/hooks/useComplaint'
 import { formatDate, statusColor, severityColor, riskColor } from '@/lib/utils'
 
 export default function ComplaintDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const router = useRouter()
+  const { id }   = useParams<{ id: string }>()
+  const router   = useRouter()
   const { isAuthenticated, loadUser, user } = useAuthStore()
   const { complaint, stages, isLoading, error } = useComplaintDetail(id)
   const [showInternal, setShowInternal] = useState(false)
@@ -25,78 +26,106 @@ export default function ComplaintDetailPage() {
   const isAnalystOrAdmin = user?.role === 'admin' || user?.role === 'analyst'
 
   useEffect(() => {
-    if (!isAuthenticated) loadUser().then(() => {
-      if (!useAuthStore.getState().isAuthenticated) router.push('/login')
-    })
+    if (!isAuthenticated)
+      loadUser().then(() => { if (!useAuthStore.getState().isAuthenticated) router.push('/login') })
   }, [])
 
+  /* ── Loading / error state ── */
   if (isLoading || !complaint) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center py-32 text-slate-400">
+        <div className="flex items-center justify-center py-32">
           {error ? (
-            <div className="text-center">
-              <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-400" />
-              <p>{error}</p>
-              <Link href="/complaints" className="mt-4 block text-sm text-blue-600 hover:underline">← Back to complaints</Link>
+            <div className="text-center animate-fade-up">
+              <div className="mb-4 mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20">
+                <AlertCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm text-foreground/70">{error}</p>
+              <Link href="/complaints" className="mt-4 inline-block text-sm text-primary hover:text-indigo-300 transition-colors">
+                ← Back to complaints
+              </Link>
             </div>
           ) : (
-            <div className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Loading…</div>
+            <div className="flex items-center gap-3 text-muted-foreground animate-fade-in">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Loading complaint…</span>
+            </div>
           )}
         </div>
       </div>
     )
   }
 
-  const isProcessing = complaint.status === 'processing' || complaint.status === 'pending'
-  const isComplete = complaint.status === 'complete'
+  const isComplete    = complaint.status === 'complete'
+  const isProcessing  = complaint.status === 'processing' || complaint.status === 'pending'
   const isInterrupted = complaint.status === 'interrupted'
+  const isFailed      = !isComplete && !isProcessing && !isInterrupted
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
 
-        {/* ── Back + status header ─────────────────────────────────────── */}
-        <div className="mb-6 flex items-center gap-3">
-          <Link href="/complaints" className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition">
-            <ArrowLeft className="h-4 w-4" /> Back
+        {/* ── Breadcrumb ────────────────────────────────────── */}
+        <div className="mb-6 flex items-center gap-2 text-sm animate-fade-up">
+          <Link href="/complaints" className="btn-ghost gap-1.5 px-2 py-1 text-sm">
+            <ArrowLeft className="h-3.5 w-3.5" /> Complaints
           </Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-sm font-mono text-slate-400">{id.slice(0, 12)}…</span>
+          <span className="text-white/10">/</span>
+          <span className="font-mono text-xs text-muted-foreground">{id.slice(0, 16)}…</span>
         </div>
 
-        {/* ── Status card ──────────────────────────────────────────────── */}
-        <div className={`mb-6 rounded-2xl border p-5 ${
-          isComplete ? 'border-emerald-200 bg-emerald-50' :
-          isInterrupted ? 'border-amber-200 bg-amber-50' :
-          isProcessing ? 'border-blue-200 bg-blue-50' :
-          'border-red-200 bg-red-50'
-        }`}>
+        {/* ── Status card ───────────────────────────────────── */}
+        <div className={cn(
+          'mb-5 rounded-2xl border p-5 relative overflow-hidden animate-fade-up delay-75',
+          isComplete    && 'border-emerald-500/25 bg-emerald-500/[0.05]',
+          isInterrupted && 'border-amber-500/25 bg-amber-500/[0.05]',
+          isProcessing  && 'border-primary/25 bg-primary/[0.05]',
+          isFailed      && 'border-red-500/25 bg-red-500/[0.05]',
+        )}>
+          {/* Top accent line */}
+          <div className={cn(
+            'absolute top-0 left-0 right-0 h-0.5',
+            isComplete    && 'bg-gradient-to-r from-transparent via-emerald-500/70 to-transparent',
+            isInterrupted && 'bg-gradient-to-r from-transparent via-amber-500/70 to-transparent',
+            isProcessing  && 'bg-gradient-to-r from-transparent via-primary/70 to-transparent',
+            isFailed      && 'bg-gradient-to-r from-transparent via-red-500/70 to-transparent',
+          )} />
+
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {isComplete && <CheckCircle2 className="h-6 w-6 text-emerald-600 flex-shrink-0" />}
-              {isProcessing && <Loader2 className="h-6 w-6 text-blue-600 flex-shrink-0 animate-spin" />}
-              {isInterrupted && <Clock className="h-6 w-6 text-amber-600 flex-shrink-0" />}
-              {!isComplete && !isProcessing && !isInterrupted && (
-                <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-              )}
+            <div className="flex items-start gap-3">
+              {/* Icon */}
+              <div className={cn(
+                'mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border',
+                isComplete    && 'bg-emerald-500/15 border-emerald-500/30',
+                isInterrupted && 'bg-amber-500/15 border-amber-500/30',
+                isProcessing  && 'bg-primary/15 border-primary/30',
+                isFailed      && 'bg-red-500/15 border-red-500/30',
+              )}>
+                {isComplete    && <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+                {isProcessing  && <Loader2 className="h-4 w-4 text-indigo-400 animate-spin" />}
+                {isInterrupted && <Clock className="h-4 w-4 text-amber-400" />}
+                {isFailed      && <AlertCircle className="h-4 w-4 text-red-400" />}
+              </div>
+
               <div>
-                <p className={`font-semibold ${
-                  isComplete ? 'text-emerald-800' :
-                  isInterrupted ? 'text-amber-800' :
-                  isProcessing ? 'text-blue-800' : 'text-red-800'
-                }`}>
-                  {isComplete && 'Your complaint has been reviewed'}
-                  {isProcessing && 'Your complaint is being reviewed'}
-                  {isInterrupted && 'Action required'}
-                  {!isComplete && !isProcessing && !isInterrupted && 'Complaint needs attention'}
+                <p className={cn(
+                  'text-sm font-semibold',
+                  isComplete    && 'text-emerald-300',
+                  isInterrupted && 'text-amber-300',
+                  isProcessing  && 'text-indigo-300',
+                  isFailed      && 'text-red-300',
+                )}>
+                  {isComplete    && 'Complaint fully processed'}
+                  {isProcessing  && 'AI pipeline running…'}
+                  {isInterrupted && 'Action required from reviewer'}
+                  {isFailed      && 'Complaint needs attention'}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                   Submitted {formatDate(complaint.created_at)}
                   {complaint.classification?.issue_type && (
-                    <> · {complaint.classification.issue_type.replace(/_/g, ' ')}</>
+                    <> &nbsp;·&nbsp; {complaint.classification.issue_type.replace(/_/g, ' ')}</>
                   )}
                 </p>
               </div>
@@ -107,70 +136,84 @@ export default function ComplaintDetailPage() {
           </div>
         </div>
 
-        {/* ── Review panel (prominent when awaiting review) ─────────────── */}
+        {/* ── Review panel ──────────────────────────────────── */}
         {isInterrupted && (
-          <div className="mb-6">
+          <div className="mb-5 animate-fade-up delay-150">
             <ReviewPanel complaint={complaint} />
           </div>
         )}
 
-        {/* ── Processing indicator ──────────────────────────────────────── */}
+        {/* ── Processing indicator ───────────────────────────── */}
         {isProcessing && (
-          <div className="mb-6 rounded-2xl border border-blue-100 bg-white p-6 text-center">
-            <Loader2 className="mx-auto mb-3 h-8 w-8 text-blue-500 animate-spin" />
-            <p className="font-medium text-slate-700">AI pipeline running…</p>
-            <p className="mt-1 text-sm text-slate-400">
-              We're classifying your complaint, analyzing root cause, and drafting a response.
-              This typically takes 15–30 seconds.
+          <div className="mb-5 glass-card p-8 text-center animate-fade-up delay-150">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
+              <Cpu className="h-6 w-6 text-primary animate-pulse" />
+            </div>
+            <p className="font-serif text-lg text-foreground">Processing your complaint</p>
+            <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+              The 8-node AI pipeline is running — classifying, analyzing root cause, and drafting a response.
+              Typically takes 15–30 seconds.
             </p>
+            <div className="mt-5 flex items-center justify-center gap-1.5">
+              {[0,1,2].map(i => (
+                <div
+                  key={i}
+                  className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                />
+              ))}
+            </div>
           </div>
         )}
 
-        {/* ── Response letter ───────────────────────────────────────────── */}
+        {/* ── Response letter ───────────────────────────────── */}
         {complaint.response_draft && (
-          <div className="mb-6 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-slate-500" />
-              <h2 className="font-semibold text-slate-800">Response</h2>
+          <div className="mb-5 glass-card overflow-hidden animate-fade-up delay-150">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <h2 className="text-sm font-semibold text-foreground">Response Letter</h2>
               {complaint.audit_verdict === 'PASS' && (
-                <span className="ml-auto flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  <CheckCircle2 className="h-3 w-3" /> Compliance reviewed
+                <span className="ml-auto flex items-center gap-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                  <CheckCircle2 className="h-2.5 w-2.5" /> Compliance reviewed
                 </span>
               )}
             </div>
-            <div className="px-6 py-5">
-              <pre className="whitespace-pre-wrap text-sm text-slate-700 leading-relaxed font-sans">
+            <div className="px-5 py-5">
+              <pre className="whitespace-pre-wrap font-sans text-sm text-foreground/85 leading-relaxed">
                 {complaint.response_draft}
               </pre>
             </div>
           </div>
         )}
 
-        {/* ── Your complaint text ───────────────────────────────────────── */}
+        {/* ── Complaint text ────────────────────────────────── */}
         {complaint.scrubbed_text && (
-          <div className="mb-6 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4">
-              <h2 className="font-semibold text-slate-800">Your Complaint</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Personal information has been redacted for privacy</p>
+          <div className="mb-5 glass-card overflow-hidden animate-fade-up delay-225">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4">
+              <h2 className="text-sm font-semibold text-foreground">Your Complaint</h2>
+              <span className="ml-auto text-[10px] text-muted-foreground">PII automatically redacted</span>
             </div>
-            <div className="px-6 py-4">
-              <p className="whitespace-pre-wrap text-sm text-slate-700 leading-relaxed">
+            <div className="px-5 py-4">
+              <p className="whitespace-pre-wrap text-sm text-foreground/75 leading-relaxed">
                 {complaint.scrubbed_text}
               </p>
             </div>
           </div>
         )}
 
-        {/* ── Case summary ─────────────────────────────────────────────── */}
+        {/* ── Case summary ──────────────────────────────────── */}
         {complaint.classification && (
-          <div className="mb-6 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4">
-              <h2 className="font-semibold text-slate-800">Case Summary</h2>
+          <div className="mb-5 glass-card overflow-hidden animate-fade-up delay-300">
+            <div className="border-b border-white/[0.06] px-5 py-4">
+              <h2 className="text-sm font-semibold text-foreground">Case Summary</h2>
             </div>
-            <div className="grid grid-cols-2 gap-px bg-slate-100 sm:grid-cols-3">
-              <SummaryTile label="Category" value={complaint.classification.product_type.replace(/_/g, ' ')} />
-              <SummaryTile label="Issue">
-                <span className="text-sm font-medium text-slate-800">
+            <div className="grid grid-cols-2 gap-px bg-white/[0.04] sm:grid-cols-3">
+              <SummaryTile label="Category"
+                value={complaint.classification.product_type.replace(/_/g, ' ')} />
+              <SummaryTile label="Issue Type">
+                <span className="text-sm font-medium text-foreground/90">
                   {complaint.classification.issue_type.replace(/_/g, ' ')}
                 </span>
               </SummaryTile>
@@ -180,52 +223,63 @@ export default function ComplaintDetailPage() {
                 </Badge>
               </SummaryTile>
               {complaint.assigned_team && (
-                <SummaryTile label="Assigned To" value={complaint.assigned_team} className="col-span-2 sm:col-span-3" />
+                <SummaryTile label="Assigned Team" value={complaint.assigned_team}
+                  className="col-span-2 sm:col-span-3" />
               )}
               {complaint.policy_citations && (
-                <SummaryTile label="SLA" value={(complaint.policy_citations as any).sla_window ?? '—'} className="col-span-2 sm:col-span-3" />
+                <SummaryTile label="SLA Window"
+                  value={(complaint.policy_citations as any).sla_window ?? '—'}
+                  className="col-span-2 sm:col-span-3" />
               )}
             </div>
           </div>
         )}
 
-        {/* ── Internal analysis section (analyst / admin only) ─────────── */}
+        {/* ── Internal analysis (analyst / admin) ───────────── */}
         {isAnalystOrAdmin && (
-          <div className="mb-6">
+          <div className="mb-5 animate-fade-up delay-400">
             <button
               onClick={() => setShowInternal((v) => !v)}
-              className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-4 text-left shadow-sm hover:bg-slate-50 transition"
+              className="flex w-full items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-4 text-left transition-all duration-200 hover:border-primary/20 hover:bg-primary/[0.03]"
             >
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-slate-500" />
-                <span className="font-semibold text-slate-700">Internal Analysis</span>
-                <span className="text-xs text-slate-400">(analyst / admin only)</span>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                  <Shield className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-foreground">Internal Analysis</span>
+                  <span className="ml-2 text-[10px] text-muted-foreground">analyst / admin only</span>
+                </div>
               </div>
               {showInternal
-                ? <ChevronUp className="h-4 w-4 text-slate-400" />
-                : <ChevronDown className="h-4 w-4 text-slate-400" />
+                ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                : <ChevronDown className="h-4 w-4 text-muted-foreground" />
               }
             </button>
 
             {showInternal && (
-              <div className="mt-3 space-y-4 animate-fade-in">
+              <div className="mt-3 space-y-4 animate-fade-up">
 
                 {/* Pipeline */}
                 <PipelineView stages={stages} status={complaint.status} />
 
                 {/* Classification detail */}
-                <InternalSection title="Classification Detail" icon={<BarChart3 className="h-4 w-4" />}>
+                <InternalSection title="Classification Detail" icon={<BarChart3 className="h-3.5 w-3.5" />}>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <Tile label="Compliance Risk">
                       <Badge variant={riskColor(complaint.classification?.compliance_risk ?? '') as any}>
                         {complaint.classification?.compliance_risk}
                       </Badge>
                     </Tile>
-                    <Tile label="Confidence" value={`${Math.round((complaint.classification?.confidence ?? 0) * 100)}%`} />
+                    <Tile label="Confidence"
+                      value={`${Math.round((complaint.classification?.confidence ?? 0) * 100)}%`} />
                     <Tile label="Audit Verdict">
-                      <span className={`text-sm font-bold ${
-                        complaint.audit_verdict === 'PASS' ? 'text-emerald-600' : 'text-red-600'
-                      }`}>{complaint.audit_verdict ?? '—'}</span>
+                      <span className={cn(
+                        'text-sm font-bold font-mono',
+                        complaint.audit_verdict === 'PASS' ? 'text-emerald-400' : 'text-red-400'
+                      )}>
+                        {complaint.audit_verdict === 'PASS' ? '✓ PASS' : complaint.audit_verdict ? '✗ FAIL' : '—'}
+                      </span>
                     </Tile>
                   </div>
                 </InternalSection>
@@ -233,21 +287,25 @@ export default function ComplaintDetailPage() {
                 {/* Root cause */}
                 {complaint.root_cause && (
                   <InternalSection title="Root Cause Analysis">
-                    <p className="text-sm text-slate-700 leading-relaxed mb-4">{complaint.root_cause}</p>
+                    <p className="mb-4 text-sm text-foreground/75 leading-relaxed">{complaint.root_cause}</p>
                     {complaint.root_cause_evidence?.length > 0 && (
                       <>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                          Evidence — {complaint.root_cause_evidence.length} similar cases
+                        <p className="section-label mb-3">
+                          {complaint.root_cause_evidence.length} similar historical cases
                         </p>
                         <div className="space-y-2">
                           {complaint.root_cause_evidence.slice(0, 3).map((ev) => (
-                            <div key={ev.rank} className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold text-slate-700">#{ev.rank}</span>
-                                <span className="text-slate-400">{ev.citation.product} / {ev.citation.issue}</span>
-                                <span className="ml-auto text-slate-400">Score: {ev.score.toFixed(3)}</span>
+                            <div key={ev.rank} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5">
+                              <div className="mb-1.5 flex items-center gap-2">
+                                <span className="font-mono text-[11px] font-bold text-primary/70">#{ev.rank}</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {ev.citation.product} / {ev.citation.issue}
+                                </span>
+                                <span className="ml-auto font-mono text-[10px] text-muted-foreground/50">
+                                  score {ev.score.toFixed(3)}
+                                </span>
                               </div>
-                              <p>{ev.summary}</p>
+                              <p className="text-xs text-foreground/60 leading-relaxed">{ev.summary}</p>
                             </div>
                           ))}
                         </div>
@@ -259,15 +317,17 @@ export default function ComplaintDetailPage() {
                 {/* Remediation */}
                 {complaint.remediation_steps?.length > 0 && (
                   <InternalSection title="Remediation Plan">
-                    <ol className="space-y-2">
+                    <ol className="space-y-3">
                       {complaint.remediation_steps.map((step) => (
                         <li key={step.order} className="flex gap-3 text-sm">
-                          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30 font-mono text-[10px] font-bold text-primary mt-0.5">
                             {step.order}
                           </span>
                           <div>
-                            <p className="text-slate-800">{step.action}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{step.policy_reference}</p>
+                            <p className="text-sm text-foreground/85">{step.action}</p>
+                            <p className="mt-0.5 font-mono text-[10px] text-muted-foreground/50">
+                              {step.policy_reference}
+                            </p>
                           </div>
                         </li>
                       ))}
@@ -278,9 +338,7 @@ export default function ComplaintDetailPage() {
                 {/* Regulatory explainer */}
                 {complaint.explanation && (
                   <InternalSection title="Regulatory Audit Trail">
-                    <pre className="whitespace-pre-wrap text-xs text-slate-600 leading-relaxed font-mono bg-slate-50 rounded-lg p-4 border border-slate-100 overflow-x-auto">
-                      {complaint.explanation}
-                    </pre>
+                    <pre className="output-block">{complaint.explanation}</pre>
                   </InternalSection>
                 )}
 
@@ -290,23 +348,21 @@ export default function ComplaintDetailPage() {
             )}
           </div>
         )}
-
       </main>
     </div>
   )
 }
 
-// ── Sub-components ───────────────────────────────────────────────────────────
-
+/* ── Sub-components ──────────────────────────────────────────────────────── */
 function SummaryTile({
   label, value, children, className = '',
 }: {
   label: string; value?: string; children?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={`bg-white px-5 py-3.5 ${className}`}>
-      <p className="text-xs text-slate-400 mb-1">{label}</p>
-      {children ?? <p className="text-sm font-medium text-slate-800">{value}</p>}
+    <div className={`bg-card px-5 py-4 ${className}`}>
+      <p className="section-label mb-1.5">{label}</p>
+      {children ?? <p className="text-sm font-medium text-foreground/90">{value}</p>}
     </div>
   )
 }
@@ -317,21 +373,21 @@ function InternalSection({
   title: string; icon?: React.ReactNode; children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="border-b border-slate-100 px-6 py-3.5 flex items-center gap-2">
-        {icon && <span className="text-slate-400">{icon}</span>}
-        <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
+    <div className="glass-card overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-3.5">
+        {icon && <span className="text-muted-foreground">{icon}</span>}
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">{title}</h3>
       </div>
-      <div className="px-6 py-4">{children}</div>
+      <div className="px-5 py-4">{children}</div>
     </div>
   )
 }
 
 function Tile({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-3">
-      <p className="text-xs text-slate-400 mb-1">{label}</p>
-      {children ?? <p className="text-sm font-medium text-slate-900">{value}</p>}
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5">
+      <p className="section-label mb-2">{label}</p>
+      {children ?? <p className="text-sm font-medium text-foreground/90">{value}</p>}
     </div>
   )
 }
