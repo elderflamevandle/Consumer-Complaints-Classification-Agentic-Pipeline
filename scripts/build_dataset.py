@@ -199,11 +199,20 @@ def build_dataset(
     input_path: Path,
     output_dir: Path,
     seed: int,
+    no_sample: bool = False,
 ) -> dict[str, object]:
     source_records = _load_csv_records(input_path)
     filtered = apply_filters(source_records)
-    sample = stratified_sample(filtered, target_size=TARGET_SIZE, seed=seed)
-    dev, holdout, demos = split_sample(sample, seed=seed)
+    
+    if no_sample:
+        sample = list(filtered)
+        random.Random(seed).shuffle(sample)
+        holdout = sample[:1000]
+        demos = sample[1000:2000]
+        dev = sample[2000:]
+    else:
+        sample = stratified_sample(filtered, target_size=TARGET_SIZE, seed=seed)
+        dev, holdout, demos = split_sample(sample, seed=seed)
 
     dev_path = output_dir / 'dev.parquet'
     holdout_path = output_dir / 'holdout.parquet'
@@ -238,12 +247,14 @@ def main() -> int:
     parser.add_argument('--input', required=True, help='Path to CFPB CSV export')
     parser.add_argument('--output-dir', default='data/processed', help='Output directory')
     parser.add_argument('--seed', type=int, default=get_settings().dataset_seed)
+    parser.add_argument('--no-sample', action='store_true', help='Ingest all records without stratifying to sample limit')
     args = parser.parse_args()
 
     metadata = build_dataset(
         input_path=Path(args.input),
         output_dir=Path(args.output_dir),
         seed=args.seed,
+        no_sample=args.no_sample,
     )
     print(json.dumps(metadata, indent=2, sort_keys=True))
     return 0

@@ -28,7 +28,7 @@ class SeedStatus:
     reused_previous_index: bool = False
 
 
-def load_records(dataset_path: Path, limit: int = 5_000) -> list[dict[str, Any]]:
+def load_records(dataset_path: Path, limit: int | None = 5_000) -> list[dict[str, Any]]:
     try:
         import pandas as pd
     except Exception as error:
@@ -44,7 +44,10 @@ def load_records(dataset_path: Path, limit: int = 5_000) -> list[dict[str, Any]]
     if missing:
         raise ValueError(f'Missing required columns: {missing}')
 
-    trimmed = frame.head(limit)
+    if limit is not None and limit > 0:
+        trimmed = frame.head(limit)
+    else:
+        trimmed = frame
     return trimmed.to_dict(orient='records')
 
 
@@ -134,6 +137,7 @@ def seed_vector_index(
     dataset_path: Path,
     index_dir: Path,
     embedding_model: str,
+    limit: int | None = 5_000,
 ) -> SeedStatus:
     dataset_hash = compute_dataset_hash(dataset_path)
     should_seed, reason = should_reseed(
@@ -147,7 +151,7 @@ def seed_vector_index(
     has_existing_manifest = (index_dir / 'manifest.json').exists()
 
     try:
-        records = load_records(dataset_path)
+        records = load_records(dataset_path, limit=limit)
         ids = [str(record['id']) for record in records]
         texts = [str(record['narrative']) for record in records]
         metadatas = [
@@ -190,12 +194,14 @@ def main() -> int:
     parser.add_argument('--dataset', default=str(DEFAULT_DATASET_PATH))
     parser.add_argument('--index-dir', default=str(DEFAULT_INDEX_DIR))
     parser.add_argument('--embedding-model', default=EMBEDDING_MODEL_ID)
+    parser.add_argument('--no-limit', action='store_true', help='Ingest all records without limiting to 5000')
     args = parser.parse_args()
 
     status = seed_vector_index(
         dataset_path=Path(args.dataset),
         index_dir=Path(args.index_dir),
         embedding_model=args.embedding_model,
+        limit=None if args.no_limit else 5_000,
     )
     print(f'[{status.status}] {status.message}')
     return 0 if status.status in {'seeded', 'skipped', 'warning'} else 1
