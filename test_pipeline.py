@@ -49,6 +49,7 @@ def main():
     print("\n[5] FINAL EMAILED RESPONSE:")
     print("-" * 40)
     print(final_state.get("response_draft"))
+    print("FINAL STATE -->", final_state)
     print("-" * 40)
 
 if __name__ == "__main__":

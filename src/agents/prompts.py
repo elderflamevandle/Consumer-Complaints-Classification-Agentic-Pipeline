@@ -252,6 +252,16 @@ def build_remediator_prompt(
 ) -> str:
     assert policy.policy is not None
     policy_data = policy.policy
+    citation_lines = ''
+    for row in policy_data.legal_citations[:6]:
+        title = row.get('title', '')
+        url = row.get('url', '')
+        publisher = row.get('publisher', '')
+        if title or url:
+            citation_lines += f'  - {title} ({publisher}) — {url}\n'
+    citation_block = (
+        f'- legal_citations (verify at source):\n{citation_lines}' if citation_lines else ''
+    )
     return (
         'You are a CFPB-certified compliance remediation planner.\n'
         'Your role is to produce a legally grounded, ordered action plan that resolves the '
@@ -274,6 +284,7 @@ def build_remediator_prompt(
         f'- sla_window: {policy_data.sla_window}\n'
         f'- required_actions: {policy_data.required_actions}\n'
         f'- regulatory_basis: {policy_data.regulatory_basis}\n'
+        f'{citation_block}'
     )
 
 

@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from src.agents.remediator import RemediatorAgent
-from src.schemas.classification import ClassificationResult
+from src.schemas.classification import (
+    ClassificationResult,
+    ComplianceRisk,
+    IssueType,
+    ProductType,
+    SeverityLevel,
+)
 from src.schemas.root_cause import (
     AmbiguityFlag,
     EvidenceCitation,
@@ -42,10 +48,10 @@ class ScriptedRunner:
 
 def _classification() -> ClassificationResult:
     return ClassificationResult(
-        product_type='CREDIT_CARD',
-        issue_type='BILLING',
-        severity='HIGH',
-        compliance_risk='HIGH',
+        product_type=ProductType.CREDIT_CARD,
+        issue_type=IssueType.FEES_OR_INTEREST,
+        severity=SeverityLevel.HIGH,
+        compliance_risk=ComplianceRisk.HIGH,
         confidence=0.82,
     )
 

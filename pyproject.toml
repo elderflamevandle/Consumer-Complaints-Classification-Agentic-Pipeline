@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src", "legal_knowledge_mcp"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

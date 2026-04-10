@@ -30,7 +30,7 @@ class RemediationResult(BaseModel):
     status: str
     route: str
     action_plan: list[RemediationStep] = Field(default_factory=list)
-    policy_citations: dict[str, str | list[str]] = Field(default_factory=dict)
+    policy_citations: dict[str, Any] = Field(default_factory=dict)
 
 
 class _ModelPlan(BaseModel):
@@ -68,6 +68,7 @@ class RemediatorAgent:
         policy_result = self._mcp.get_sla_requirements(
             issue_type=classification.issue_type.value,
             state_code=state_code,
+            product_type=classification.product_type.value,
         )
         if not policy_result.available:
             result = RemediationResult(
@@ -115,10 +116,12 @@ class RemediatorAgent:
                 )
             )
 
-        citations: dict[str, str | list[str]] = {
+        citations: dict[str, Any] = {
             'sla_window': policy.sla_window,
             'required_actions': list(policy.required_actions),
             'regulatory_basis': policy.regulatory_basis,
+            'product_type': policy.product_type,
+            'legal_citations': list(policy.legal_citations),
         }
         result = RemediationResult(
             status='ok',

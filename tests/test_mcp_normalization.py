@@ -1,6 +1,8 @@
 """Tests for MCP server _normalize_issue function and expanded regulation lookups."""
 from __future__ import annotations
 
+import pytest
+
 from mcp_server.server import _normalize_issue, get_sla_requirements
 
 
@@ -76,3 +78,39 @@ def test_fraud_ny_override_returns_7_day_sla() -> None:
 def test_general_issue_returns_default_30_day_sla() -> None:
     result = get_sla_requirements(issue_type="Closing an account", state_code="TX")
     assert result["sla_window"] == "30 calendar days"
+
+
+def test_search_state_regulations_tool_returns_bundle() -> None:
+    from legal_knowledge_mcp.server import handle_request
+
+    out = handle_request(
+        {
+            "tool": "search_state_regulations",
+            "arguments": {
+                "state": "CA",
+                "product_category": "CREDIT_CARD",
+                "issue_code": "Fees or interest",
+            },
+        }
+    )
+    assert out["status"] == "ok"
+    body = out["result"]
+    assert body["state"] == "CA"
+    assert body["issue_code"] == "FEES_OR_INTEREST"
+    assert "legal_citations" in body
+    assert body.get("disclaimer")
+    assert body.get("source") == "mock_fallback"
+
+
+def test_live_mode_requires_api_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    from legal_knowledge_mcp.bridge import get_sla_requirements
+
+    monkeypatch.setenv("LEGAL_MCP_USE_MOCK_FALLBACK", "0")
+    for key in ("GOVINFO_API_KEY", "DATA_GOV_API_KEY", "OPEN_STATES_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    try:
+        get_sla_requirements(issue_type="Fees or interest", state_code="TX")
+    except ValueError as exc:
+        assert "Live compliance mode requires API keys" in str(exc)
+    else:
+        raise AssertionError("expected ValueError when live mode has no API keys")
