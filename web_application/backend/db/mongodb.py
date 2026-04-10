@@ -70,6 +70,10 @@ def pipeline_stages_col() -> Any:
     return get_db()["pipeline_stages"]
 
 
+def teams_col() -> Any:
+    return get_db()["teams"]
+
+
 def cfpb_col() -> Any:
     """Read-only access to the existing CFPB complaints collection."""
     return get_db()[settings.cfpb_collection]
@@ -83,7 +87,15 @@ async def _ensure_indexes() -> None:
     # users
     await db["users"].create_indexes([
         IndexModel([("email", ASCENDING)], unique=True),
+        IndexModel([("team_id", ASCENDING)]),
         IndexModel([("created_at", DESCENDING)]),
+    ])
+
+    # teams
+    await db["teams"].create_indexes([
+        IndexModel([("slug", ASCENDING)], unique=True),
+        IndexModel([("is_active", ASCENDING)]),
+        IndexModel([("issue_types", ASCENDING)]),
     ])
 
     # complaints
@@ -92,6 +104,7 @@ async def _ensure_indexes() -> None:
         IndexModel([("status", ASCENDING)]),
         IndexModel([("created_at", DESCENDING)]),
         IndexModel([("assigned_team", ASCENDING)]),
+        IndexModel([("team_id", ASCENDING)]),
         IndexModel(
             [("complaint_text", "text")],
             name="complaint_text_search",

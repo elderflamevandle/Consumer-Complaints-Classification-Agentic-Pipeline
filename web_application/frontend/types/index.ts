@@ -1,3 +1,18 @@
+// ── Team ──────────────────────────────────────────────────────────────────────
+
+export interface Team {
+  id: string
+  name: string
+  slug: string
+  description: string
+  issue_types: string[]
+  product_types: string[]
+  is_active: boolean
+  member_count: number
+  created_at: string
+  updated_at: string
+}
+
 // ── User ──────────────────────────────────────────────────────────────────────
 
 export type UserRole = 'admin' | 'analyst' | 'viewer'
@@ -7,6 +22,8 @@ export interface User {
   email: string
   full_name: string
   role: UserRole
+  team_id: string | null
+  team_name: string | null
   is_active: boolean
   last_login_at: string | null
   created_at: string
@@ -68,6 +85,7 @@ export interface Complaint {
   state_code: string
   status: ComplaintStatus
   assigned_team: string | null
+  team_id: string | null
   classification: ClassificationResult | null
   root_cause: string | null
   root_cause_evidence: RootCauseEvidence[]

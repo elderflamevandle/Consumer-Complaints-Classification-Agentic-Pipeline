@@ -10,12 +10,12 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..auth.dependencies import AdminUser
-from ..auth.password import hash_password, validate_password_policy
-from ..db.mongodb import audit_logs_col, complaints_col, users_col
+from ..db.mongodb import audit_logs_col, complaints_col, teams_col, users_col
 from ..models.audit_log import AuditAction
+from ..models.team import TeamDocument, TeamPublic
 from ..models.user import UserDocument, UserPublic, UserRole
 from ..services.audit_service import log_event, get_recent_events
 
@@ -34,6 +34,29 @@ class UpdateRoleRequest(BaseModel):
 class DeactivateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class AssignTeamRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    team_id: Optional[str] = None   # None = remove from team
+
+
+class CreateTeamRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=2, max_length=100)
+    slug: str = Field(min_length=2, max_length=60, pattern=r"^[a-z0-9-]+$")
+    description: str = Field(default="", max_length=500)
+    issue_types: List[str] = Field(default_factory=list)
+    product_types: List[str] = Field(default_factory=list)
+
+
+class UpdateTeamRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
+    issue_types: Optional[List[str]] = None
+    product_types: Optional[List[str]] = None
+    is_active: Optional[bool] = None
 
 
 # ── User management ───────────────────────────────────────────────────────────
@@ -233,3 +256,155 @@ async def dashboard_stats(current_user: AdminUser) -> Dict[str, Any]:
         "by_severity": by_severity,
         "daily_volume": daily_counts,
     }
+
+
+# ── Team management ───────────────────────────────────────────────────────────
+
+@router.get("/teams")
+async def list_teams(
+    current_user: AdminUser,
+    include_inactive: bool = False,
+) -> Dict[str, Any]:
+    query: Dict[str, Any] = {} if include_inactive else {"is_active": True}
+    cursor = teams_col().find(query).sort("name", 1)
+    teams = []
+    async for doc in cursor:
+        team = TeamDocument.from_mongo(doc)
+        member_count = await users_col().count_documents({"team_id": team.id})
+        teams.append(TeamPublic(
+            id=team.id,
+            name=team.name,
+            slug=team.slug,
+            description=team.description,
+            issue_types=team.issue_types,
+            product_types=team.product_types,
+            is_active=team.is_active,
+            member_count=member_count,
+            created_at=team.created_at,
+            updated_at=team.updated_at,
+        ).model_dump())
+    return {"items": teams, "total": len(teams)}
+
+
+@router.post("/teams", status_code=status.HTTP_201_CREATED)
+async def create_team(
+    body: CreateTeamRequest,
+    request: Request,
+    current_user: AdminUser,
+) -> Dict[str, Any]:
+    # Enforce slug uniqueness
+    existing = await teams_col().find_one({"slug": body.slug})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Team slug '{body.slug}' already exists")
+
+    team = TeamDocument(
+        name=body.name,
+        slug=body.slug,
+        description=body.description,
+        issue_types=body.issue_types,
+        product_types=body.product_types,
+    )
+    await teams_col().insert_one(team.to_mongo())
+    await log_event(
+        AuditAction.TEAM_CREATED,
+        user_id=current_user.id,
+        entity_type="team",
+        entity_id=team.id,
+        details={"name": team.name, "slug": team.slug},
+        ip_address=request.client.host if request.client else None,
+    )
+    return {"id": team.id, "name": team.name, "slug": team.slug}
+
+
+@router.patch("/teams/{team_id}")
+async def update_team(
+    team_id: str,
+    body: UpdateTeamRequest,
+    request: Request,
+    current_user: AdminUser,
+) -> Dict[str, Any]:
+    doc = await teams_col().find_one({"_id": team_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    updates: Dict[str, Any] = {"updated_at": datetime.utcnow()}
+    if body.name is not None:
+        updates["name"] = body.name
+    if body.description is not None:
+        updates["description"] = body.description
+    if body.issue_types is not None:
+        updates["issue_types"] = body.issue_types
+    if body.product_types is not None:
+        updates["product_types"] = body.product_types
+    if body.is_active is not None:
+        updates["is_active"] = body.is_active
+
+    await teams_col().update_one({"_id": team_id}, {"$set": updates})
+
+    # If team was renamed, sync team_name on all member users
+    if body.name:
+        await users_col().update_many(
+            {"team_id": team_id},
+            {"$set": {"team_name": body.name, "updated_at": datetime.utcnow()}},
+        )
+
+    await log_event(
+        AuditAction.TEAM_UPDATED,
+        user_id=current_user.id,
+        entity_type="team",
+        entity_id=team_id,
+        details={k: v for k, v in updates.items() if k != "updated_at"},
+        ip_address=request.client.host if request.client else None,
+    )
+    updated = await teams_col().find_one({"_id": team_id})
+    t = TeamDocument.from_mongo(updated)
+    return {"id": t.id, "name": t.name, "slug": t.slug, "is_active": t.is_active}
+
+
+# ── User → Team assignment ─────────────────────────────────────────────────────
+
+@router.patch("/users/{user_id}/team")
+async def assign_user_to_team(
+    user_id: str,
+    body: AssignTeamRequest,
+    request: Request,
+    current_user: AdminUser,
+) -> UserPublic:
+    """Assign or remove a user from a team.  Pass team_id=null to unassign."""
+    user_doc = await users_col().find_one({"_id": user_id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    team_name: Optional[str] = None
+    if body.team_id is not None:
+        team_doc = await teams_col().find_one({"_id": body.team_id})
+        if not team_doc:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if not team_doc.get("is_active", True):
+            raise HTTPException(status_code=400, detail="Cannot assign user to inactive team")
+        team_name = team_doc["name"]
+
+    old_team_id = user_doc.get("team_id")
+    await users_col().update_one(
+        {"_id": user_id},
+        {"$set": {
+            "team_id": body.team_id,
+            "team_name": team_name,
+            "updated_at": datetime.utcnow(),
+        }},
+    )
+    await log_event(
+        AuditAction.USER_TEAM_ASSIGNED,
+        user_id=current_user.id,
+        entity_type="user",
+        entity_id=user_id,
+        details={"old_team_id": old_team_id, "new_team_id": body.team_id, "team_name": team_name},
+        ip_address=request.client.host if request.client else None,
+    )
+    updated = await users_col().find_one({"_id": user_id})
+    u = UserDocument.from_mongo(updated)
+    return UserPublic(
+        id=u.id, email=u.email, full_name=u.full_name,
+        role=u.role, team_id=u.team_id, team_name=u.team_name,
+        is_active=u.is_active, last_login_at=u.last_login_at, created_at=u.created_at,
+    )

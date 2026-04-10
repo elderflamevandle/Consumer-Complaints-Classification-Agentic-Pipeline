@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from ..db.mongodb import complaints_col, pipeline_stages_col
+from ..db.mongodb import complaints_col, pipeline_stages_col, teams_col
 from ..models.audit_log import AuditAction
 from ..models.complaint import (
     ClassificationResult,
@@ -63,18 +63,42 @@ async def get_complaint(complaint_id: str) -> Optional[ComplaintDocument]:
     return ComplaintDocument.from_mongo(raw)
 
 
+def _build_complaint_query(
+    user_id: Optional[str] = None,
+    team_id: Optional[str] = None,
+    status: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Build a MongoDB query for complaint access control.
+
+    Scoping rules:
+      - Admin:   no user_id / team_id filter → sees everything
+      - Analyst: user_id AND team_id provided → $or clause (own + team's)
+      - Viewer:  user_id only → only their own submissions
+    """
+    query: Dict[str, Any] = {}
+
+    if user_id and team_id:
+        # Analyst: own complaints OR team-assigned complaints
+        query["$or"] = [{"user_id": user_id}, {"team_id": team_id}]
+    elif user_id:
+        query["user_id"] = user_id
+
+    if status:
+        query["status"] = status
+
+    return query
+
+
 async def list_complaints(
     *,
     user_id: Optional[str] = None,
+    team_id: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 50,
     skip: int = 0,
 ) -> List[ComplaintDocument]:
-    query: Dict[str, Any] = {}
-    if user_id:
-        query["user_id"] = user_id
-    if status:
-        query["status"] = status
+    query = _build_complaint_query(user_id=user_id, team_id=team_id, status=status)
     cursor = (
         complaints_col()
         .find(query)
@@ -91,13 +115,10 @@ async def list_complaints(
 async def count_complaints(
     *,
     user_id: Optional[str] = None,
+    team_id: Optional[str] = None,
     status: Optional[str] = None,
 ) -> int:
-    query: Dict[str, Any] = {}
-    if user_id:
-        query["user_id"] = user_id
-    if status:
-        query["status"] = status
+    query = _build_complaint_query(user_id=user_id, team_id=team_id, status=status)
     return await complaints_col().count_documents(query)
 
 
@@ -225,6 +246,11 @@ async def run_pipeline(
                 update_fields["explanation"] = final["explanation"]
             if "assigned_team" in final:
                 update_fields["assigned_team"] = final["assigned_team"]
+            # Resolve team_id from the slug emitted by the remediator node
+            if "assigned_team_slug" in final:
+                team_doc = await teams_col().find_one({"slug": final["assigned_team_slug"]})
+                if team_doc:
+                    update_fields["team_id"] = team_doc["_id"]
             if "review_required" in final:
                 update_fields["review_required"] = final["review_required"]
 

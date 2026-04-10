@@ -102,7 +102,7 @@ api.interceptors.response.use(
 export default api
 
 // ── Typed endpoint helpers ────────────────────────────────────────────────────
-import type { AuthTokens, Complaint, DashboardStats, PaginatedResponse, User } from '@/types'
+import type { AuthTokens, Complaint, DashboardStats, PaginatedResponse, Team, User } from '@/types'
 
 export const authApi = {
   register: (email: string, password: string, full_name: string) =>
@@ -136,6 +136,28 @@ export const adminApi = {
   deactivate: (userId: string, reason?: string) =>
     api.patch(`/api/admin/users/${userId}/deactivate`, { reason }),
   activate: (userId: string) => api.patch(`/api/admin/users/${userId}/activate`),
+  assignTeam: (userId: string, teamId: string | null) =>
+    api.patch<User>(`/api/admin/users/${userId}/team`, { team_id: teamId }),
   systemAudit: (limit = 100, action_filter?: string) =>
     api.get('/api/admin/audit', { params: { limit, action_filter } }),
+  // Team CRUD
+  listTeams: (includeInactive = false) =>
+    api.get<{ items: Team[]; total: number }>('/api/admin/teams', {
+      params: { include_inactive: includeInactive },
+    }),
+  createTeam: (data: {
+    name: string; slug: string; description?: string
+    issue_types?: string[]; product_types?: string[]
+  }) => api.post<{ id: string; name: string; slug: string }>('/api/admin/teams', data),
+  updateTeam: (teamId: string, data: Partial<{
+    name: string; description: string
+    issue_types: string[]; product_types: string[]; is_active: boolean
+  }>) => api.patch(`/api/admin/teams/${teamId}`, data),
+}
+
+export const teamsApi = {
+  myTeam: () => api.get<{ team: Team; members: User[] }>('/api/teams/me'),
+  myComplaints: (params?: { status_filter?: string; limit?: number; skip?: number }) =>
+    api.get<PaginatedResponse<Complaint>>('/api/teams/me/complaints', { params }),
+  myMembers: () => api.get<{ members: User[]; total: number }>('/api/teams/me/members'),
 }

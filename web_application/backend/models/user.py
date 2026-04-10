@@ -27,6 +27,9 @@ class UserDocument(BaseModel):
     password_hash: str
     full_name: str
     role: UserRole = UserRole.ANALYST
+    # Team membership — set by admin; None means unassigned
+    team_id: Optional[str] = None
+    team_name: Optional[str] = None   # Denormalised for cheap reads
     is_active: bool = True
     failed_login_count: int = 0
     locked_until: Optional[datetime] = None
@@ -51,6 +54,8 @@ class UserPublic(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole
+    team_id: Optional[str] = None
+    team_name: Optional[str] = None
     is_active: bool
     last_login_at: Optional[datetime] = None
     created_at: datetime

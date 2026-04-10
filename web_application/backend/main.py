@@ -34,6 +34,7 @@ from .middleware.sanitize import SanitizeMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
 from .routers.admin import router as admin_router
 from .routers.complaints import router as complaints_router
+from .routers.teams import router as teams_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/api")
     app.include_router(complaints_router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
+    app.include_router(teams_router, prefix="/api")
 
     # ── Utility endpoints ─────────────────────────────────────────────────────
 

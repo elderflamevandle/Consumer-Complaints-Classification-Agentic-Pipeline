@@ -61,6 +61,8 @@ async def get_current_user(
         email=user.email,
         full_name=user.full_name,
         role=user.role,
+        team_id=user.team_id,
+        team_name=user.team_name,
         is_active=user.is_active,
         last_login_at=user.last_login_at,
         created_at=user.created_at,

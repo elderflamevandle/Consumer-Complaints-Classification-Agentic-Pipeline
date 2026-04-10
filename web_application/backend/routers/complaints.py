@@ -101,16 +101,33 @@ async def list_complaints(
     limit: int = 50,
     skip: int = 0,
 ) -> Dict[str, Any]:
-    # Analysts see only their own; admins see all
-    uid = current_user.id if current_user.role != UserRole.ADMIN else None
+    """
+    Access control:
+      - Admin   → no filter, sees all complaints
+      - Analyst → sees complaints in their team OR submitted by themselves
+      - Viewer  → sees only complaints they submitted
+    """
+    uid: Optional[str] = None
+    tid: Optional[str] = None
+
+    if current_user.role == UserRole.ADMIN:
+        pass  # no filter
+    elif current_user.role == UserRole.ANALYST:
+        uid = current_user.id
+        tid = current_user.team_id  # May be None if analyst is unassigned
+    else:
+        uid = current_user.id  # Viewer: own only
 
     complaints = await complaint_service.list_complaints(
         user_id=uid,
+        team_id=tid,
         status=status_filter,
         limit=min(limit, 100),
         skip=skip,
     )
-    total = await complaint_service.count_complaints(user_id=uid, status=status_filter)
+    total = await complaint_service.count_complaints(
+        user_id=uid, team_id=tid, status=status_filter
+    )
 
     return {
         "items": [_serialize_complaint(c) for c in complaints],
@@ -129,7 +146,17 @@ async def get_complaint(
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
 
-    if current_user.role != UserRole.ADMIN and complaint.user_id != current_user.id:
+    # Access rules:
+    #   Admin   → always allowed
+    #   Analyst → allowed if they submitted it OR it belongs to their team
+    #   Viewer  → allowed only if they submitted it
+    is_owner = complaint.user_id == current_user.id
+    is_team_member = (
+        current_user.role == UserRole.ANALYST
+        and current_user.team_id is not None
+        and complaint.team_id == current_user.team_id
+    )
+    if current_user.role != UserRole.ADMIN and not is_owner and not is_team_member:
         raise HTTPException(status_code=403, detail="Access denied")
 
     stages = await complaint_service.get_pipeline_stages(complaint_id)
@@ -200,7 +227,13 @@ async def get_audit_trail(
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
 
-    if current_user.role != UserRole.ADMIN and complaint.user_id != current_user.id:
+    is_owner = complaint.user_id == current_user.id
+    is_team_member = (
+        current_user.role == UserRole.ANALYST
+        and current_user.team_id is not None
+        and complaint.team_id == current_user.team_id
+    )
+    if current_user.role != UserRole.ADMIN and not is_owner and not is_team_member:
         raise HTTPException(status_code=403, detail="Access denied")
 
     events = await audit_service.get_events_for_entity(

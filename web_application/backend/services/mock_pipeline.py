@@ -252,12 +252,15 @@ class MockPipelineRunner:
         self._result["remediation_steps"] = [s.model_dump() for s in steps]
         self._result["policy_citations"] = citations
         assigned_team = _assign_team(classification.issue_type)
+        assigned_team_slug = _assign_team_slug(classification.issue_type)
         self._result["assigned_team"] = assigned_team
+        self._result["assigned_team_slug"] = assigned_team_slug  # Used for DB team_id lookup
 
         yield PipelineUpdate("remediator", "completed", {
             "action_plan": [s.action for s in steps],
             "policy_citations": citations,
             "assigned_team": assigned_team,
+            "assigned_team_slug": assigned_team_slug,
             "model": "llama-3.3-70b + MCP policy server (mock)",
             "latency_ms": int(self.delay * 1800),
             "tokens_used": random.randint(320, 460),
@@ -471,16 +474,30 @@ def _sla_window(issue_type: str) -> str:
     return windows.get(issue_type, "30 calendar days")
 
 
+
+# ── Team assignment ───────────────────────────────────────────────────────────
+# Each entry: (display_name, slug)
+# Slugs must match the `slug` field of TeamDocument records in MongoDB so that
+# complaint_service can do a lookup and populate complaint.team_id.
+_TEAM_MAP: dict[str, tuple[str, str]] = {
+    "FRAUD":            ("Fraud & Security Operations",    "fraud-security"),
+    "BILLING":          ("Billing Resolution Team",         "billing-resolution"),
+    "IDENTITY_THEFT":   ("Identity Protection Unit",        "identity-protection"),
+    "PAYMENT":          ("Payments Operations",             "payments-ops"),
+    "CREDIT_REPORTING": ("Credit Bureau Relations",         "credit-bureau"),
+    "CUSTOMER_SERVICE": ("Customer Experience Escalations", "cx-escalations"),
+}
+_DEFAULT_TEAM = ("General Complaint Resolution", "general-resolution")
+
+
 def _assign_team(issue_type: str) -> str:
-    teams = {
-        "FRAUD": "Fraud & Security Operations",
-        "BILLING": "Billing Resolution Team",
-        "IDENTITY_THEFT": "Identity Protection Unit",
-        "PAYMENT": "Payments Operations",
-        "CREDIT_REPORTING": "Credit Bureau Relations",
-        "CUSTOMER_SERVICE": "Customer Experience Escalations",
-    }
-    return teams.get(issue_type, "General Complaint Resolution")
+    """Return the human-readable team display name."""
+    return _TEAM_MAP.get(issue_type, _DEFAULT_TEAM)[0]
+
+
+def _assign_team_slug(issue_type: str) -> str:
+    """Return the unique team slug used for DB lookup."""
+    return _TEAM_MAP.get(issue_type, _DEFAULT_TEAM)[1]
 
 
 def _mock_response_draft(

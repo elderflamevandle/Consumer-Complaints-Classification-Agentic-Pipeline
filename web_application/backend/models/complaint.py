@@ -82,7 +82,8 @@ class ComplaintDocument(BaseModel):
     scrubbed_text: Optional[str] = None   # PII-redacted version
     state_code: str = "CA"
     status: ComplaintStatus = ComplaintStatus.PENDING
-    assigned_team: Optional[str] = None
+    assigned_team: Optional[str] = None   # Display name set by pipeline / manual assign
+    team_id: Optional[str] = None         # FK → teams._id (set by auto-routing or admin)
 
     # Pipeline outputs
     classification: Optional[ClassificationResult] = None

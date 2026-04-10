@@ -28,7 +28,11 @@
       "Bash(docker exec:*)",
       "Bash(curl -s -X POST http://localhost:8000/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@fincomplaint.ai\",\"password\":\"Admin@1234!\"}')",
       "Bash(python3 -m json.tool)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(findstr /i \"error warning failed ERROR\")"
     ]
   }
 }
