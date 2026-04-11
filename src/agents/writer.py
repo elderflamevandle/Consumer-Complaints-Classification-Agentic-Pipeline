@@ -44,6 +44,8 @@ class WriterAgent:
         self.last_model: str | None = None
         self.used_fallback = False
         self.guardrail_triggered = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
     def compose_response(
         self,
@@ -65,9 +67,12 @@ class WriterAgent:
         )
         self.used_fallback = False
         self.guardrail_triggered = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
         raw_output = ''
         for attempt in range(self.repair_retries + 1):
+            self.last_llm_attempts += 1
             response = self._client.complete(
                 prompt=prompt,
                 agent_name='writer',
@@ -75,6 +80,7 @@ class WriterAgent:
                 max_tokens=520,
             )
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             raw_output = response.text
             parsed = self._parse_or_none(raw_output)
             if parsed is not None:

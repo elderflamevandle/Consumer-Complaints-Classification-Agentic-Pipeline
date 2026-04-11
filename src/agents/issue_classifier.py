@@ -43,6 +43,7 @@ class IssueClassifierAgent:
         self.last_llm_attempts = 0
         self.used_fallback = False
         self.last_model: str | None = None
+        self.last_total_tokens = 0
 
     def classify_issue(
         self,
@@ -58,6 +59,7 @@ class IssueClassifierAgent:
         prompt = build_issue_classifier_prompt(complaint_text, product)
         self.last_llm_attempts = 0
         self.used_fallback = False
+        self.last_total_tokens = 0
 
         last_error: str = ""
         for attempt in range(self.repair_retries + 1):
@@ -71,6 +73,7 @@ class IssueClassifierAgent:
                 response_format=_JSON_RESPONSE_FORMAT,
             )
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             parsed, error = self._parse(response.text)
             if parsed is not None:
                 return parsed
