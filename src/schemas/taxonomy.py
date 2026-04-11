@@ -159,9 +159,13 @@ def get_display_name(product_key: str) -> str:
 
 
 def format_issue_list_for_prompt(product_key: str) -> str:
-    """Return a numbered issue list for injection into a classifier prompt."""
+    """Return a numbered, anti-hallucination issue list for classifier prompts."""
     issues = get_issues_for_product(product_key)
-    return "\n".join(f'  {i + 1}. "{issue}"' for i, issue in enumerate(issues))
+    lines: list[str] = []
+    for i, issue in enumerate(issues, start=1):
+        lines.append(f'  {i}. EXACT ISSUE LABEL: "{issue}"')
+        lines.append('     Use this label only if it is the single best match for the main complaint harm.')
+    return "\n".join(lines)
 
 
 def format_product_list_for_prompt() -> str:
