@@ -10,11 +10,13 @@ Endpoints:
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from app.run_logger import RunLogger
 from src.graph.pipeline import build_graph, run_complaint
 
 # ---------------------------------------------------------------------------
@@ -86,14 +88,22 @@ def process_complaint(request: ComplaintRequest) -> ComplaintResponse:
     if _graph is None:
         raise HTTPException(status_code=503, detail="Pipeline graph not initialised.")
 
+    tid = request.thread_id or str(uuid.uuid4())
+    logger = RunLogger(
+        thread_id=tid,
+        complaint_text=request.complaint_text,
+        state_code=request.state_code,
+    )
+
     try:
         final_state: dict[str, Any] = run_complaint(
             _graph,
             complaint_text=request.complaint_text,
             state_code=request.state_code,
-            thread_id=request.thread_id,
+            thread_id=tid,
         )
     except Exception as exc:
+        logger.write_error(exc, http_status=500)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     # Serialise Pydantic models nested inside the TypedDict
@@ -104,4 +114,5 @@ def process_complaint(request: ComplaintRequest) -> ComplaintResponse:
         else:
             serialised[key] = value
 
+    logger.write(final_state, http_status=200)
     return ComplaintResponse(data=serialised)
