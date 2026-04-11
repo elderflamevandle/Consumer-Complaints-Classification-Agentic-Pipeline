@@ -42,6 +42,7 @@ class RootCauseAgent:
         self.last_llm_attempts = 0
         self.last_model: str | None = None
         self.used_fallback = False
+        self.last_total_tokens = 0
 
     def diagnose(
         self,
@@ -54,6 +55,7 @@ class RootCauseAgent:
         self.last_llm_attempts = 0
         self.last_model = None
         self.used_fallback = False
+        self.last_total_tokens = 0
 
         prompt = self._prompt(complaint_text, cases)
         raw_output = ''
@@ -66,6 +68,7 @@ class RootCauseAgent:
                 max_tokens=420,
             )
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             raw_output = response.text
             parsed = self._parse_or_none(raw_output)
             if parsed is not None:

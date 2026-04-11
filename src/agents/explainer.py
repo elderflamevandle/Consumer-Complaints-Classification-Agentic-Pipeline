@@ -35,6 +35,8 @@ class ExplainerAgent:
         self._audit_logger = audit_logger
         self.last_model: str | None = None
         self.used_fallback = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
     def summarize_chain(
         self,
@@ -56,9 +58,12 @@ class ExplainerAgent:
             audit_verdict=audit_verdict,
         )
         self.used_fallback = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
         for attempt in range(self.repair_retries + 1):
             try:
+                self.last_llm_attempts += 1
                 response = self._client.complete(
                     prompt=prompt,
                     agent_name='explainer',
@@ -69,6 +74,7 @@ class ExplainerAgent:
                 break
 
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             parsed = self._parse_or_none(response.text)
             if parsed is not None:
                 normalized = self._normalize_result(parsed)

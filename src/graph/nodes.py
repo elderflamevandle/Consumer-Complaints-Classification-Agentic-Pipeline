@@ -106,12 +106,21 @@ def _get_audit_logger() -> AuditLogger:
 # Helper: telemetry record
 # ---------------------------------------------------------------------------
 
-def _telemetry(node: str, latency_ms: int, model: str = '', tokens: int = 0) -> dict[str, Any]:
+def _telemetry(
+    node: str,
+    latency_ms: int,
+    model: str = '',
+    tokens: int = 0,
+    attempts: int = 0,
+    used_fallback: bool = False,
+) -> dict[str, Any]:
     return {
         'node': node,
         'latency_ms': latency_ms,
         'model': model,
         'tokens': tokens,
+        'attempts': attempts,
+        'used_fallback': used_fallback,
         'timestamp': time.time(),
     }
 
@@ -155,7 +164,14 @@ def product_classifier_node(state: PipelineState) -> dict[str, Any]:
         'product_classification': product_result,
         'events': [f'{thread_id}:product_classified:{product_result.product.value}'],
         'stage_telemetry': [
-            _telemetry('product_classifier', latency, model=agent.last_model or 'unknown')
+            _telemetry(
+                'product_classifier',
+                latency,
+                model=agent.last_model or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
 
@@ -186,7 +202,14 @@ def issue_classifier_node(state: PipelineState) -> dict[str, Any]:
             f'{thread_id}:severity:{issue_result.severity.value}',
         ],
         'stage_telemetry': [
-            _telemetry('issue_classifier', latency, model=agent.last_model or 'unknown')
+            _telemetry(
+                'issue_classifier',
+                latency,
+                model=agent.last_model or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
 
@@ -213,7 +236,14 @@ def root_cause_node(state: PipelineState) -> dict[str, Any]:
         'diagnosis': diagnosis,
         'events': [f'{thread_id}:root_cause_complete'],
         'stage_telemetry': [
-            _telemetry('root_cause', latency, model=getattr(agent, 'last_model', '') or 'unknown')
+            _telemetry(
+                'root_cause',
+                latency,
+                model=getattr(agent, 'last_model', '') or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
 
@@ -245,7 +275,14 @@ def remediator_node(state: PipelineState) -> dict[str, Any]:
         'remediation': remediation,
         'events': [f'{thread_id}:remediation_complete'],
         'stage_telemetry': [
-            _telemetry('remediator', latency, model=agent.last_model or 'unknown')
+            _telemetry(
+                'remediator',
+                latency,
+                model=agent.last_model or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
 
@@ -280,7 +317,14 @@ def response_writer_node(state: PipelineState) -> dict[str, Any]:
         'response_loop_status': 'needs_review',
         'events': [f'{thread_id}:response_drafted'],
         'stage_telemetry': [
-            _telemetry('response_writer', latency, model=agent.last_model or 'unknown')
+            _telemetry(
+                'response_writer',
+                latency,
+                model=agent.last_model or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
 
@@ -325,7 +369,14 @@ def response_auditor_node(state: PipelineState) -> dict[str, Any]:
         'unresolved_issues': list(audit.must_fix_items) if status == 'needs_rewrite' else [],
         'events': [f'{thread_id}:audit_{audit.verdict.value.lower()}'],
         'stage_telemetry': [
-            _telemetry('response_auditor', latency, model=agent.last_model or 'unknown')
+            _telemetry(
+                'response_auditor',
+                latency,
+                model=agent.last_model or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
 
@@ -359,6 +410,13 @@ def explainer_node(state: PipelineState) -> dict[str, Any]:
         'explanation': explanation,
         'events': [f'{thread_id}:pipeline_complete'],
         'stage_telemetry': [
-            _telemetry('explainer', latency, model=agent.last_model or 'unknown')
+            _telemetry(
+                'explainer',
+                latency,
+                model=agent.last_model or 'unknown',
+                tokens=getattr(agent, 'last_total_tokens', 0),
+                attempts=getattr(agent, 'last_llm_attempts', 0),
+                used_fallback=getattr(agent, 'used_fallback', False),
+            )
         ],
     }
