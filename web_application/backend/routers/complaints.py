@@ -90,7 +90,7 @@ async def submit_complaint(
         "id": complaint.id,
         "status": complaint.status,
         "created_at": complaint.created_at.isoformat(),
-        "websocket_url": f"/ws/complaints/{complaint.id}",
+        "websocket_url": f"/api/complaints/ws/{complaint.id}",
     }
 
 

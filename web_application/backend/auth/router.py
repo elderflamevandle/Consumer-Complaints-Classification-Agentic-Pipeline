@@ -209,10 +209,10 @@ async def login(body: LoginRequest, request: Request, response: Response):
         if doc:
             # Increment per-user counter; lock if threshold reached
             new_count = (doc.get("failed_login_count") or 0) + 1
-            update: dict = {"failed_login_count": new_count, "updated_at": datetime.utcnow()}
+            update: dict = {"failed_login_count": new_count, "updated_at": datetime.now(tz=timezone.utc)}
             if new_count >= settings.max_failed_login_attempts:
                 await set_account_locked(str(doc["_id"]))
-                update["locked_until"] = datetime.utcnow() + timedelta(
+                update["locked_until"] = datetime.now(tz=timezone.utc) + timedelta(
                     minutes=settings.account_lockout_minutes
                 )
                 await _write_audit(
@@ -253,7 +253,7 @@ async def login(body: LoginRequest, request: Request, response: Response):
     await clear_login_attempts(ip)
     await users_col().update_one(
         {"_id": user.id},
-        {"$set": {"failed_login_count": 0, "last_login_at": datetime.utcnow(), "updated_at": datetime.utcnow()}},
+        {"$set": {"failed_login_count": 0, "last_login_at": datetime.now(tz=timezone.utc), "updated_at": datetime.now(tz=timezone.utc)}},
     )
 
     access_token = create_access_token(subject=user.id, role=user.role)

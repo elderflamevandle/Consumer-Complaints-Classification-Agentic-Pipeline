@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ..db.mongodb import complaints_col, pipeline_stages_col, teams_col
@@ -20,7 +20,18 @@ from ..models.complaint import (
     RemediationStep,
 )
 from .audit_service import log_event
-from .mock_pipeline import MockPipelineRunner, PIPELINE_NODES
+from .pipeline_runner import PipelineRunner
+
+PIPELINE_NODES = [
+    "intake",
+    "classifier",
+    "routing",
+    "root_cause",
+    "remediator",
+    "writer",
+    "auditor",
+    "explainer",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +137,7 @@ async def update_complaint_fields(
     complaint_id: str,
     fields: Dict[str, Any],
 ) -> None:
-    fields["updated_at"] = datetime.utcnow()
+    fields["updated_at"] = datetime.now(tz=timezone.utc)
     await complaints_col().update_one({"_id": complaint_id}, {"$set": fields})
 
 
@@ -151,7 +162,7 @@ async def upsert_stage(
     model_used: Optional[str] = None,
     error: Optional[str] = None,
 ) -> None:
-    now = datetime.utcnow()
+    now = datetime.now(tz=timezone.utc)
     await pipeline_stages_col().update_one(
         {"complaint_id": complaint_id, "node": node},
         {
@@ -207,7 +218,7 @@ async def run_pipeline(
         await upsert_stage(complaint_id, node, "pending")
 
     async def _worker():
-        runner = MockPipelineRunner(complaint_id, complaint_text, state_code)
+        runner = PipelineRunner(complaint_id, complaint_text, state_code)
         try:
             async for update in runner.run():
                 # Persist stage result
@@ -257,7 +268,7 @@ async def run_pipeline(
             final_status = final.get("status", ComplaintStatus.COMPLETE)
             update_fields["status"] = final_status
             if final_status == ComplaintStatus.COMPLETE:
-                update_fields["completed_at"] = datetime.utcnow()
+                update_fields["completed_at"] = datetime.now(tz=timezone.utc)
 
             await update_complaint_fields(complaint_id, update_fields)
 
@@ -315,7 +326,7 @@ async def resume_pipeline_after_review(
         "review_action": action,
         "reviewer_id": reviewer_id,
         "reviewer_notes": reviewer_notes,
-        "reviewed_at": datetime.utcnow(),
+        "reviewed_at": datetime.now(tz=timezone.utc),
     }
     if action == "reject":
         update_fields["status"] = ComplaintStatus.REJECTED

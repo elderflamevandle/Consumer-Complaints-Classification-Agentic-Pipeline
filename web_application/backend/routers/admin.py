@@ -6,7 +6,7 @@ All endpoints require UserRole.ADMIN.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -97,7 +97,7 @@ async def change_user_role(
     old_role = doc.get("role")
     await users_col().update_one(
         {"_id": user_id},
-        {"$set": {"role": body.role, "updated_at": datetime.utcnow()}},
+        {"$set": {"role": body.role, "updated_at": datetime.now(tz=timezone.utc)}},
     )
     await log_event(
         AuditAction.USER_ROLE_CHANGED,
@@ -128,7 +128,7 @@ async def deactivate_user(
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
     await users_col().update_one(
         {"_id": user_id},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": False, "updated_at": datetime.now(tz=timezone.utc)}},
     )
     await log_event(
         AuditAction.USER_DEACTIVATED,
@@ -149,7 +149,7 @@ async def activate_user(
 ) -> Dict[str, str]:
     await users_col().update_one(
         {"_id": user_id},
-        {"$set": {"is_active": True, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": True, "updated_at": datetime.now(tz=timezone.utc)}},
     )
     await log_event(
         AuditAction.USER_ACTIVATED,
@@ -182,7 +182,7 @@ async def system_audit_log(
 
 @router.get("/stats")
 async def dashboard_stats(current_user: AdminUser) -> Dict[str, Any]:
-    now = datetime.utcnow()
+    now = datetime.now(tz=timezone.utc)
     last_7d = now - timedelta(days=7)
     last_30d = now - timedelta(days=30)
 
@@ -327,7 +327,7 @@ async def update_team(
     if not doc:
         raise HTTPException(status_code=404, detail="Team not found")
 
-    updates: Dict[str, Any] = {"updated_at": datetime.utcnow()}
+    updates: Dict[str, Any] = {"updated_at": datetime.now(tz=timezone.utc)}
     if body.name is not None:
         updates["name"] = body.name
     if body.description is not None:
@@ -345,7 +345,7 @@ async def update_team(
     if body.name:
         await users_col().update_many(
             {"team_id": team_id},
-            {"$set": {"team_name": body.name, "updated_at": datetime.utcnow()}},
+            {"$set": {"team_name": body.name, "updated_at": datetime.now(tz=timezone.utc)}},
         )
 
     await log_event(
@@ -390,7 +390,7 @@ async def assign_user_to_team(
         {"$set": {
             "team_id": body.team_id,
             "team_name": team_name,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(tz=timezone.utc),
         }},
     )
     await log_event(

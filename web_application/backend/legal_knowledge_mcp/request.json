@@ -1,0 +1,58 @@
+[
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "CA",
+      "product_category": "CREDIT_CARD",
+      "issue_code": "Advertising and marketing, including promotional offers"
+    }
+  },
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "TX",
+      "product_category": "CHECKING_SAVINGS_ACCOUNT",
+      "issue_code": "Problem with a lender or other company charging your account"
+    }
+  },
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "NY",
+      "product_category": "MONEY_TRANSFER",
+      "issue_code": "Unauthorized transactions or other transaction problem"
+    }
+  },
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "FL",
+      "product_category": "DEBT_COLLECTION",
+      "issue_code": "Attempts to collect debt not owed"
+    }
+  },
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "IL",
+      "product_category": "CREDIT_REPORTING",
+      "issue_code": "Incorrect information on your report"
+    }
+  },
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "WA",
+      "product_category": "MORTGAGE",
+      "issue_code": "Applying for a mortgage or refinancing an existing mortgage"
+    }
+  },
+  {
+    "tool": "search_state_regulations",
+    "arguments": {
+      "state": "AZ",
+      "product_category": "VEHICLE_LOAN_LEASE",
+      "issue_code": "Repossession"
+    }
+  }
+]

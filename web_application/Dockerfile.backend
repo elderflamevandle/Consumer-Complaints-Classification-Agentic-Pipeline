@@ -33,7 +33,8 @@ COPY backend/ ./backend/
 
 # Ensure Python doesn't write .pyc files to disk & logs go straight to stdout
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/backend
 
 RUN chown -R appuser:appuser /app
 USER appuser

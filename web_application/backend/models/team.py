@@ -7,7 +7,7 @@ on the issue_types list, and analysts only see complaints assigned to their team
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import uuid4
 
@@ -27,8 +27,8 @@ class TeamDocument(BaseModel):
     # Informational: which product types this team typically handles
     product_types: List[str] = Field(default_factory=list)
     is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     def to_mongo(self) -> dict:
         return self.model_dump(by_alias=True)

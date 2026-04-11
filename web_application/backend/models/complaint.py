@@ -4,7 +4,7 @@ Complaint and pipeline-stage document models.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -65,8 +65,8 @@ class PipelineStageDocument(BaseModel):
     tokens_used: int = 0
     output: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     def to_mongo(self) -> dict:
         return self.model_dump(by_alias=True)
@@ -103,8 +103,8 @@ class ComplaintDocument(BaseModel):
     reviewed_at: Optional[datetime] = None
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     completed_at: Optional[datetime] = None
 
     def to_mongo(self) -> dict:

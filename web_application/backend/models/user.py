@@ -4,7 +4,7 @@ User document model (MongoDB collection: users).
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Optional
 from uuid import uuid4
@@ -34,8 +34,8 @@ class UserDocument(BaseModel):
     failed_login_count: int = 0
     locked_until: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     def to_mongo(self) -> dict:
         d = self.model_dump(by_alias=True)

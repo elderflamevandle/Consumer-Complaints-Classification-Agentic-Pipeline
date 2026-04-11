@@ -4,7 +4,7 @@ Audit log document — append-only.  NEVER update or delete audit records.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -60,7 +60,7 @@ class AuditLogDocument(BaseModel):
     details: Dict[str, Any] = Field(default_factory=dict)
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     def to_mongo(self) -> dict:
         return self.model_dump(by_alias=True)

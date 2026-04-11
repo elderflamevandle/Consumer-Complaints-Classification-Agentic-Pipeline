@@ -6,15 +6,18 @@ Never hard-code secrets; use .env for local dev, secrets manager for production.
 from __future__ import annotations
 
 import secrets
+from pathlib import Path
 from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ENV_FILE = Path(__file__).resolve().parent / ".env"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -28,7 +31,7 @@ class Settings(BaseSettings):
 
     # ── MongoDB Atlas ─────────────────────────────────────────────────────────
     mongodb_url: str = Field(
-        default="mongodb+srv://knimbalk_db_user:Xw8rLGNq2aqpk46C@umd.mcnucik.mongodb.net"
+        default="mongodb://localhost:27017"
     )
     mongodb_db_name: str = Field(default="fincomplaint_ai")
     # The existing CFPB collection (read-only by app; source for RAG)

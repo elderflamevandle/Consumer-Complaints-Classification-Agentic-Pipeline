@@ -2,7 +2,7 @@
 Service for tracking token budget usage.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
 
 class BudgetService:
@@ -28,7 +28,7 @@ class BudgetService:
         else:
             status = "normal"
 
-        reset_at = (datetime.utcnow() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        reset_at = (datetime.now(tz=timezone.utc) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
         return {
             "daily_limit": self.daily_limit,
