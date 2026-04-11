@@ -38,17 +38,27 @@ def get_sla_requirements(
             regulations_path=regulations_path,
         )
 
-    if not api_keys_configured():
-        raise ValueError(
-            'Live compliance mode requires API keys. Set GOVINFO_API_KEY or DATA_GOV_API_KEY '
-            'and/or OPEN_STATES_API_KEY, or set LEGAL_MCP_USE_MOCK_FALLBACK=1 for offline mock data.'
-        )
+    try:
+        if not api_keys_configured():
+            raise ValueError(
+                'Live compliance mode requires API keys. Set GOVINFO_API_KEY or DATA_GOV_API_KEY '
+                'and/or OPEN_STATES_API_KEY, or set LEGAL_MCP_USE_MOCK_FALLBACK=1 for offline mock data.'
+            )
 
-    return build_live_policy(
-        issue_type=issue_type,
-        state_code=state_code,
-        product_type=product_type,
-    )
+        return build_live_policy(
+            issue_type=issue_type,
+            state_code=state_code,
+            product_type=product_type,
+        )
+    except Exception as e:
+        import sys
+        print(f"⚠️ Live policy retrieval failed ({e}). Falling back to mock dataset...", file=sys.stderr)
+        return _from_mock_dataset(
+            issue_type=issue_type,
+            state_code=state_code,
+            product_type=product_type,
+            regulations_path=regulations_path,
+        )
 
 
 def _from_mock_dataset(

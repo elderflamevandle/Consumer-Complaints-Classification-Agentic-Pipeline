@@ -22,6 +22,7 @@ dependencies = [
   "langchain-core>=0.3.0",
   "groq>=1.1.2",
   "dotenv>=0.9.9",
+  "chromadb>=1.5.7",
 ]
 
 [tool.hatch.build.targets.wheel]

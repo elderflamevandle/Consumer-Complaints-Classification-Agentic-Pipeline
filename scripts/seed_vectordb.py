@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +14,9 @@ from src.tools.vector_index import (
     write_manifest,
 )
 
-EMBEDDING_MODEL_ID = 'bge-large-en-v1.5'
+# ChromaDB's built-in default embedding function (all-MiniLM-L6-v2 via ONNX).
+# Embeddings for both indexing and querying are handled by ChromaDB automatically.
+EMBEDDING_MODEL_ID = 'chromadb-default-minilm'
 DEFAULT_DATASET_PATH = Path('data/processed/dev.parquet')
 DEFAULT_INDEX_DIR = Path('chroma_db')
 
@@ -28,7 +28,7 @@ class SeedStatus:
     reused_previous_index: bool = False
 
 
-def load_records(dataset_path: Path, limit: int = 5_000) -> list[dict[str, Any]]:
+def load_records(dataset_path: Path, limit: int | None = 5_000) -> list[dict[str, Any]]:
     try:
         import pandas as pd
     except Exception as error:
@@ -44,27 +44,8 @@ def load_records(dataset_path: Path, limit: int = 5_000) -> list[dict[str, Any]]
     if missing:
         raise ValueError(f'Missing required columns: {missing}')
 
-    trimmed = frame.head(limit)
+    trimmed = frame.head(limit) if limit is not None and limit > 0 else frame
     return trimmed.to_dict(orient='records')
-
-
-def _hash_to_vector(text: str, dimensions: int = 16) -> list[float]:
-    digest = hashlib.sha256(text.encode('utf-8')).digest()
-    values: list[float] = []
-    for i in range(dimensions):
-        values.append((digest[i] / 255.0) * 2.0 - 1.0)
-    return values
-
-
-def compute_embeddings(texts: list[str], embedding_model: str) -> list[list[float]]:
-    try:
-        from sentence_transformers import SentenceTransformer
-    except Exception:
-        # Deterministic fallback keeps the pipeline testable when model weights are unavailable.
-        return [_hash_to_vector(f'{embedding_model}:{text}') for text in texts]
-
-    encoder = SentenceTransformer(embedding_model)
-    return [list(vector) for vector in encoder.encode(texts, show_progress_bar=False)]
 
 
 def seed_storage(
@@ -73,45 +54,29 @@ def seed_storage(
     ids: list[str],
     texts: list[str],
     metadatas: list[dict[str, Any]],
-    embeddings: list[list[float]],
 ) -> str:
     index_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        import chromadb
-    except Exception:
-        fallback_path = index_dir / 'fallback_index.json'
-        payload = [
-            {
-                'id': item_id,
-                'text': text,
-                'metadata': metadata,
-                'embedding': embedding,
-            }
-            for item_id, text, metadata, embedding in zip(
-                ids,
-                texts,
-                metadatas,
-                embeddings,
-                strict=True,
-            )
-        ]
-        fallback_path.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
-        return 'json-fallback'
+    import chromadb
 
     client = chromadb.PersistentClient(path=str(index_dir))
     collection_name = 'cfpb_complaints'
 
-    existing_names = {collection.name for collection in client.list_collections()}
+    existing_names = {col.name for col in client.list_collections()}
     if collection_name in existing_names:
         client.delete_collection(collection_name)
 
-    collection = client.create_collection(name=collection_name)
+    # Use cosine distance — standard for text similarity search.
+    # ChromaDB computes embeddings from `documents` using its built-in
+    # all-MiniLM-L6-v2 (ONNX) function for both indexing and querying.
+    collection = client.create_collection(
+        name=collection_name,
+        metadata={'hnsw:space': 'cosine'},
+    )
     collection.add(
         ids=ids,
         documents=texts,
         metadatas=metadatas,
-        embeddings=embeddings,
     )
     return 'chroma'
 
@@ -134,6 +99,7 @@ def seed_vector_index(
     dataset_path: Path,
     index_dir: Path,
     embedding_model: str,
+    limit: int | None = 5_000,
 ) -> SeedStatus:
     dataset_hash = compute_dataset_hash(dataset_path)
     should_seed, reason = should_reseed(
@@ -147,7 +113,7 @@ def seed_vector_index(
     has_existing_manifest = (index_dir / 'manifest.json').exists()
 
     try:
-        records = load_records(dataset_path)
+        records = load_records(dataset_path, limit=limit)
         ids = [str(record['id']) for record in records]
         texts = [str(record['narrative']) for record in records]
         metadatas = [
@@ -160,13 +126,12 @@ def seed_vector_index(
             }
             for record in records
         ]
-        embeddings = compute_embeddings(texts, embedding_model)
+
         backend = seed_storage(
             index_dir=index_dir,
             ids=ids,
             texts=texts,
             metadatas=metadatas,
-            embeddings=embeddings,
         )
 
         manifest = create_manifest(
@@ -190,12 +155,18 @@ def main() -> int:
     parser.add_argument('--dataset', default=str(DEFAULT_DATASET_PATH))
     parser.add_argument('--index-dir', default=str(DEFAULT_INDEX_DIR))
     parser.add_argument('--embedding-model', default=EMBEDDING_MODEL_ID)
+    parser.add_argument(
+        '--no-limit',
+        action='store_true',
+        help='Ingest all records without limiting to 5000',
+    )
     args = parser.parse_args()
 
     status = seed_vector_index(
         dataset_path=Path(args.dataset),
         index_dir=Path(args.index_dir),
         embedding_model=args.embedding_model,
+        limit=None if args.no_limit else 5_000,
     )
     print(f'[{status.status}] {status.message}')
     return 0 if status.status in {'seeded', 'skipped', 'warning'} else 1
