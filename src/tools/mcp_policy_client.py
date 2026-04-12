@@ -16,7 +16,7 @@ DEFAULT_SERVER_PATH = Path('legal_knowledge_mcp/server.py')
 
 
 class SLAPolicy(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
 
     issue_type: str = Field(min_length=1)
     state_code: str = Field(min_length=2, max_length=2)

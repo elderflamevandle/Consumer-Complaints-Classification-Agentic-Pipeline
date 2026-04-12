@@ -23,6 +23,7 @@ from src.tools.audit_logger import AuditLogger
 from src.tools.vector_search import RetrievedCase, retrieve_similar_cases
 
 SCHEMA_REPAIR_RETRIES = 1
+_JSON_RESPONSE_FORMAT: dict[str, str] = {"type": "json_object"}
 
 
 class RootCauseAgent:
@@ -65,7 +66,8 @@ class RootCauseAgent:
                 prompt=prompt,
                 agent_name='root_cause',
                 critical=True,
-                max_tokens=420,
+                max_tokens=1000,
+                response_format=_JSON_RESPONSE_FORMAT,
             )
             self.last_model = response.model
             self.last_total_tokens += response.total_tokens
@@ -98,7 +100,10 @@ class RootCauseAgent:
         if candidate is None:
             return None
         try:
-            parsed = RootCauseResult.model_validate_json(candidate)
+            data = json.loads(candidate)
+            # Use model_validate (not model_validate_json) so Pydantic's lax
+            # coercion runs — e.g. LLM may return citation id as int, not str.
+            parsed = RootCauseResult.model_validate(data)
         except (ValidationError, json.JSONDecodeError):
             return None
 
@@ -209,9 +214,25 @@ class RootCauseAgent:
 
 
 def _extract_json_object(text: str) -> str | None:
-    stripped = text.strip()
+    # Strip complete <think>...</think> blocks (reasoning models like DeepSeek/Qwen).
+    stripped = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+
+    # If <think> was truncated (no closing tag), discard everything before it —
+    # the actual JSON always appears after the thinking block.
+    if '<think>' in stripped:
+        stripped = stripped[stripped.index('<think>'):].split('<think>', 1)[-1]
+        # At this point we have the raw tail after <think> with no </think>.
+        # The JSON, if present, is at the very end — find the last '{'.
+        last_brace = stripped.rfind('{')
+        if last_brace != -1:
+            stripped = stripped[last_brace:]
+        else:
+            return None
+
+    stripped = stripped.strip()
     if not stripped:
         return None
+
     if stripped.startswith('{') and stripped.endswith('}'):
         return stripped
 

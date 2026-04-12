@@ -50,6 +50,8 @@ def get_sla_requirements(
             state_code=state_code,
             product_type=product_type,
         )
+    except ValueError:
+        raise
     except Exception as e:
         import sys
         print(f"⚠️ Live policy retrieval failed ({e}). Falling back to mock dataset...", file=sys.stderr)
