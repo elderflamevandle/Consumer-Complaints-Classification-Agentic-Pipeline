@@ -18,8 +18,8 @@ services:
   # ── FastAPI Backend ────────────────────────────────────────────────────────
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ..
+      dockerfile: web_application/Dockerfile.backend
     ports:
       - "8000:8000"
     env_file:
@@ -42,8 +42,8 @@ services:
   # ── Next.js Frontend ───────────────────────────────────────────────────────
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ..
+      dockerfile: web_application/Dockerfile.frontend
     ports:
       - "3000:3000"
     environment:

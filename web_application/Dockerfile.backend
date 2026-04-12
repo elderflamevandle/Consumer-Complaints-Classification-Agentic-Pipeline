@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies into a prefix we can copy cleanly
-COPY backend/requirements.txt .
+# Build context is the project root, so paths are relative to that.
+COPY web_application/backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt
 
@@ -26,15 +27,23 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
-# Copy the backend package, maintaining the package structure so that
-# relative imports (from ..auth, from ..models, …) resolve correctly.
-# docker-compose build context is web_application/, so paths are relative to that.
-COPY backend/ ./backend/
+# Copy the canonical pipeline source (single source of truth — no more drift)
+COPY src/ ./src/
 
-# Ensure Python doesn't write .pyc files to disk & logs go straight to stdout
+# Copy the MCP policy server (needed by the remediator node at runtime)
+COPY mcp_server/ ./mcp_server/
+
+# Copy the web application backend
+COPY web_application/backend/ ./backend/
+
+# Remove the stale src/ copy bundled inside backend/ — canonical src/ above wins.
+RUN rm -rf /app/backend/src/
+
+# PYTHONPATH=/app  → src.*       resolves to /app/src/        (canonical pipeline)
+#                 → mcp_server.* resolves to /app/mcp_server/ (policy server module)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/backend
+    PYTHONPATH=/app
 
 RUN chown -R appuser:appuser /app
 USER appuser

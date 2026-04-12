@@ -87,6 +87,9 @@ def require_role(*roles: UserRole):
 
 require_admin = require_role(UserRole.ADMIN)
 require_analyst_or_above = require_role(UserRole.ADMIN, UserRole.ANALYST)
+require_customer_or_above = require_role(
+    UserRole.ADMIN, UserRole.ANALYST, UserRole.VIEWER, UserRole.CUSTOMER
+)
 
 
 # ── Type aliases ──────────────────────────────────────────────────────────────
@@ -94,3 +97,4 @@ require_analyst_or_above = require_role(UserRole.ADMIN, UserRole.ANALYST)
 CurrentUser = Annotated[UserPublic, Depends(get_current_user)]
 AdminUser = Annotated[UserPublic, Depends(require_admin)]
 AnalystUser = Annotated[UserPublic, Depends(require_analyst_or_above)]
+AnyAuthUser = Annotated[UserPublic, Depends(require_customer_or_above)]

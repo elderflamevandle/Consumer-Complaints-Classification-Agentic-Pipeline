@@ -12,7 +12,7 @@ import bleach
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ..auth.dependencies import AnalystUser, CurrentUser
+from ..auth.dependencies import AnalystUser, AnyAuthUser, CurrentUser
 from ..models.audit_log import AuditAction
 from ..models.complaint import ComplaintStatus
 from ..models.user import UserRole
@@ -65,7 +65,7 @@ def _serialize_complaint(c: Any) -> Dict[str, Any]:
 async def submit_complaint(
     body: SubmitComplaintRequest,
     request: Request,
-    current_user: AnalystUser,
+    current_user: AnyAuthUser,
 ) -> Dict[str, Any]:
     ip = request.client.host if request.client else None
 
@@ -103,9 +103,9 @@ async def list_complaints(
 ) -> Dict[str, Any]:
     """
     Access control:
-      - Admin   → no filter, sees all complaints
-      - Analyst → sees complaints in their team OR submitted by themselves
-      - Viewer  → sees only complaints they submitted
+      - Admin    → no filter, sees all complaints
+      - Analyst  → sees complaints in their team OR submitted by themselves
+      - Viewer / Customer → sees only complaints they submitted
     """
     uid: Optional[str] = None
     tid: Optional[str] = None

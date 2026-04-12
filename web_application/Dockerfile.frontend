@@ -6,7 +6,7 @@ WORKDIR /app
 # Install libc compat for native modules on Alpine
 RUN apk add --no-cache libc6-compat
 
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY web_application/frontend/package.json web_application/frontend/package-lock.json* ./
 RUN npm ci --ignore-scripts
 
 # ── Stage 2: Build ────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY frontend/ .
+COPY web_application/frontend/ .
 
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1

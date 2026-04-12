@@ -1,0 +1,48 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.uv/
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+web_application/frontend/node_modules/
+web_application/frontend/.next/
+web_application/frontend/.turbo/
+
+# ── Data / ML artifacts ───────────────────────────────────────────────────────
+data/
+chroma_db/
+*.parquet
+*.csv
+*.h5
+
+# ── Git / IDE ────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.vscode/
+.idea/
+*.code-workspace
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+web_application/backend/.env
+web_application/backend/.env.*
+
+# ── Docs / misc ───────────────────────────────────────────────────────────────
+*.md
+*.rst
+docs/
+notebooks/
+*.ipynb
+AUDIT_REPORT.md

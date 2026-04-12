@@ -144,7 +144,7 @@ async def register(body: RegisterRequest, request: Request, response: Response):
         email=body.email,
         password_hash=hash_password(body.password),
         full_name=body.full_name,
-        role=UserRole.ANALYST,
+        role=UserRole.CUSTOMER,
     )
     await users_col().insert_one(user.to_mongo())
 

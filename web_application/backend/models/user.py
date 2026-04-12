@@ -16,6 +16,7 @@ class UserRole(StrEnum):
     ADMIN = "admin"
     ANALYST = "analyst"
     VIEWER = "viewer"
+    CUSTOMER = "customer"
 
 
 class UserDocument(BaseModel):
@@ -26,7 +27,7 @@ class UserDocument(BaseModel):
     email: EmailStr
     password_hash: str
     full_name: str
-    role: UserRole = UserRole.ANALYST
+    role: UserRole = UserRole.CUSTOMER
     # Team membership — set by admin; None means unassigned
     team_id: Optional[str] = None
     team_name: Optional[str] = None   # Denormalised for cheap reads

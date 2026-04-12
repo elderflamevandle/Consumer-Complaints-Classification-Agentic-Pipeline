@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Dict
 
-from ..src.graph.pipeline import get_graph
+from src.graph.pipeline import get_graph
 
 logger = logging.getLogger(__name__)
 

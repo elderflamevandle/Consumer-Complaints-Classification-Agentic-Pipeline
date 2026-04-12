@@ -1,0 +1,112 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# FinComplaint AI — Full-stack Docker Compose
+#
+# Starts every service in one command from the project root:
+#   docker compose up --build
+#
+# Services:
+#   redis    — session cache / rate-limit store
+#   mongodb  — local document store (overrides MONGODB_URL from .env)
+#   backend  — FastAPI + LangGraph 8-node AI pipeline
+#   frontend — Next.js 14 web UI
+#
+# Pre-requisites before first run:
+#   1. Copy web_application/backend/.env.example → web_application/backend/.env
+#      and fill in GROQ_API_KEY and SECRET_KEY.
+#   2. (Optional) seed ChromaDB for RAG:
+#      uv run python scripts/seed_vectordb.py
+#      The seeded chroma_db/ is bind-mounted into the backend container.
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    command: mongod --quiet --logpath /dev/null
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  # ── FastAPI Backend + LangGraph AI Pipeline ────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: web_application/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env                          # root .env — GROQ_API_KEY, HF_TOKEN, etc.
+      - ./web_application/backend/.env  # web-specific — overrides root where needed
+    environment:
+      # These override .env values so the stack is self-contained locally.
+      # Remove MONGODB_URL here to use your Atlas cluster from .env instead.
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379/0
+      - APP_ENV=production
+      # Pipeline data paths (relative to WORKDIR /app inside the container)
+      - DATA_DIR=/app/data
+      - CHROMA_DIR=/app/chroma_db
+    volumes:
+      # Bind-mount local data so the pipeline reads CFPB parquet & ChromaDB index.
+      # Run `uv run python scripts/seed_vectordb.py` first to populate chroma_db/.
+      - ./data:/app/data:ro
+      - ./chroma_db:/app/chroma_db
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; r=urllib.request.urlopen('http://localhost:8000/health',timeout=4); sys.exit(0 if r.status==200 else 1)"]
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 5
+
+  # ── Next.js Frontend ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: web_application/Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 20s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  redis_data:
+  mongo_data:
+  # chroma_db is a bind mount (./chroma_db) — not a named volume —
+  # so locally-seeded vector data is used directly.
