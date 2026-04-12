@@ -284,10 +284,17 @@ async def run_pipeline(
             # response_draft (ResponseDraft Pydantic model)
             if "response_draft" in final:
                 draft = final["response_draft"]
-                if hasattr(draft, "content"):
+                if hasattr(draft, "render_text"):
+                    update_fields["response_draft"] = draft.render_text()
+                elif hasattr(draft, "content"):
                     update_fields["response_draft"] = draft.content
                 elif isinstance(draft, dict):
-                    update_fields["response_draft"] = draft.get("content", str(draft))
+                    # Reconstruct from dict if it has ResponseDraft fields
+                    from src.schemas.response import ResponseDraft as RD
+                    try:
+                        update_fields["response_draft"] = RD.model_validate(draft).render_text()
+                    except Exception:
+                        update_fields["response_draft"] = draft.get("content", str(draft))
                 else:
                     update_fields["response_draft"] = str(draft)
 

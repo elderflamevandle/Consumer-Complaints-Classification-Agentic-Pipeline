@@ -318,19 +318,25 @@ export default function ComplaintDetailPage() {
                 {complaint.remediation_steps?.length > 0 && (
                   <InternalSection title="Remediation Plan">
                     <ol className="space-y-3">
-                      {complaint.remediation_steps.map((step) => (
-                        <li key={step.order} className="flex gap-3 text-sm">
-                          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30 font-mono text-[10px] font-bold text-primary mt-0.5">
-                            {step.order}
-                          </span>
-                          <div>
-                            <p className="text-sm text-foreground/85">{step.action}</p>
-                            <p className="mt-0.5 font-mono text-[10px] text-muted-foreground/50">
-                              {step.policy_reference}
-                            </p>
-                          </div>
-                        </li>
-                      ))}
+                      {complaint.remediation_steps.map((step: any, i: number) => {
+                        const isObj = step && typeof step === 'object'
+                        const action = isObj ? (step.action ?? String(step)) : String(step)
+                        const ref = isObj ? step.policy_reference : null
+                        const order = isObj ? (step.order ?? i + 1) : i + 1
+                        return (
+                          <li key={i} className="flex gap-3 text-sm">
+                            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30 font-mono text-[10px] font-bold text-primary mt-0.5">
+                              {order}
+                            </span>
+                            <div>
+                              <p className="text-sm text-foreground/85">{action}</p>
+                              {ref && (
+                                <p className="mt-0.5 font-mono text-[10px] text-muted-foreground/50">{ref}</p>
+                              )}
+                            </div>
+                          </li>
+                        )
+                      })}
                     </ol>
                   </InternalSection>
                 )}
@@ -338,7 +344,27 @@ export default function ComplaintDetailPage() {
                 {/* Regulatory explainer */}
                 {complaint.explanation && (
                   <InternalSection title="Regulatory Audit Trail">
-                    <pre className="output-block">{complaint.explanation}</pre>
+                    {typeof complaint.explanation === 'string' ? (
+                      <pre className="output-block">{complaint.explanation}</pre>
+                    ) : (complaint.explanation as any)?.bullets ? (
+                      <ul className="space-y-3">
+                        {((complaint.explanation as any).bullets as any[]).map((b: any, i: number) => (
+                          <li key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="font-mono text-[10px] font-bold text-primary/70 uppercase">{b.stage}</span>
+                              {b.citations?.length > 0 && (
+                                <span className="ml-auto font-mono text-[10px] text-muted-foreground/50">
+                                  {b.citations.join(', ')}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-foreground/70 leading-relaxed">{b.summary}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <pre className="output-block">{JSON.stringify(complaint.explanation, null, 2)}</pre>
+                    )}
                   </InternalSection>
                 )}
 
