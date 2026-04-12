@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
-import { Shield, LogOut, LayoutDashboard, FileText, Settings, ChevronDown } from 'lucide-react'
+import { Shield, LogOut, LayoutDashboard, FileText, Settings, GitBranch } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function Navbar() {
@@ -18,8 +18,9 @@ export default function Navbar() {
   if (!isAuthenticated) return null
 
   const navLinks = [
-    { href: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
-    { href: '/complaints', label: 'Complaints',  icon: FileText },
+    { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+    { href: '/complaints',   label: 'Complaints',   icon: FileText },
+    { href: '/architecture', label: 'Architecture', icon: GitBranch },
     ...(user?.role === 'admin' ? [{ href: '/admin', label: 'Admin', icon: Settings }] : []),
   ]
 

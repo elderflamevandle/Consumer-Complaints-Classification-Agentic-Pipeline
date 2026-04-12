@@ -74,7 +74,7 @@ class PipelineStageDocument(BaseModel):
 
 class ComplaintDocument(BaseModel):
     """Main complaint record stored in MongoDB."""
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     id: str = Field(default_factory=lambda: str(uuid4()), alias="_id")
     user_id: str
@@ -89,11 +89,11 @@ class ComplaintDocument(BaseModel):
     classification: Optional[ClassificationResult] = None
     root_cause: Optional[str] = None
     root_cause_evidence: List[Dict[str, Any]] = Field(default_factory=list)
-    remediation_steps: List[RemediationStep] = Field(default_factory=list)
-    policy_citations: Optional[Dict[str, Any]] = None
+    remediation_steps: List[Any] = Field(default_factory=list)
+    policy_citations: Optional[Any] = None
     response_draft: Optional[str] = None
     audit_verdict: Optional[str] = None    # PASS | FAIL | ESCALATE
-    explanation: Optional[str] = None
+    explanation: Optional[Any] = None
 
     # Review (HITL)
     review_required: bool = False

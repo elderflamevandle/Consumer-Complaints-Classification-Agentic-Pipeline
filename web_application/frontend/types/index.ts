@@ -15,7 +15,7 @@ export interface Team {
 
 // ── User ──────────────────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'analyst' | 'viewer'
+export type UserRole = 'admin' | 'analyst' | 'viewer' | 'customer'
 
 export interface User {
   id: string
@@ -171,7 +171,7 @@ export interface DashboardStats {
     last_7_days: number
   }
   by_status: Record<string, number>
-  by_product: Array<{ product: string; count: number }>
+  by_product: Array<{ product: string | null; count: number }>
   by_severity: Record<string, number>
   daily_volume: Array<{ date: string; count: number }>
 }

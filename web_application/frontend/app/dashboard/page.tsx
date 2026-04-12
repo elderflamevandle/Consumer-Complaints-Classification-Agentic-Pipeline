@@ -194,13 +194,13 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                   <ul className="flex-1 space-y-1.5 min-w-0">
                     {stats.by_product.slice(0, 6).map((p, i) => (
-                      <li key={p.product} className="flex items-center gap-2 text-xs min-w-0">
+                      <li key={p.product ?? `unknown-${i}`} className="flex items-center gap-2 text-xs min-w-0">
                         <span
                           className="h-2 w-2 flex-shrink-0 rounded-full"
                           style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
                         />
                         <span className="truncate text-muted-foreground">
-                          {p.product.replace(/_/g, ' ')}
+                          {(p.product ?? 'Unknown').replace(/_/g, ' ')}
                         </span>
                         <span className="ml-auto font-mono font-semibold text-foreground flex-shrink-0">{p.count}</span>
                       </li>

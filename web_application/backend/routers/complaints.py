@@ -5,7 +5,9 @@ Complaint router — CRUD + pipeline trigger + WebSocket live stream.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import bleach
@@ -48,6 +50,17 @@ class AssignRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     assigned_team: str = Field(min_length=1, max_length=200)
+
+
+def _json_safe(obj: Any) -> Any:
+    """Recursively convert datetime objects to ISO strings for JSON serialization."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_json_safe(i) for i in obj]
+    return obj
 
 
 def _serialize_complaint(c: Any) -> Dict[str, Any]:
@@ -265,8 +278,8 @@ async def complaint_websocket(websocket: WebSocket, complaint_id: str):
                 stages = await complaint_service.get_pipeline_stages(complaint_id)
                 await websocket.send_json({
                     "type": "current_state",
-                    "complaint": _serialize_complaint(complaint),
-                    "stages": stages,
+                    "complaint": _json_safe(_serialize_complaint(complaint)),
+                    "stages": _json_safe(stages),
                 })
             await websocket.close()
             return
@@ -275,7 +288,7 @@ async def complaint_websocket(websocket: WebSocket, complaint_id: str):
         while True:
             try:
                 update = await asyncio.wait_for(queue.get(), timeout=120.0)
-                await websocket.send_json(update)
+                await websocket.send_json(_json_safe(update))
                 if update.get("type") == "pipeline_done":
                     # Send final complaint state
                     complaint = await complaint_service.get_complaint(complaint_id)
@@ -283,8 +296,8 @@ async def complaint_websocket(websocket: WebSocket, complaint_id: str):
                         stages = await complaint_service.get_pipeline_stages(complaint_id)
                         await websocket.send_json({
                             "type": "final_state",
-                            "complaint": _serialize_complaint(complaint),
-                            "stages": stages,
+                            "complaint": _json_safe(_serialize_complaint(complaint)),
+                            "stages": _json_safe(stages),
                         })
                     break
             except asyncio.TimeoutError:

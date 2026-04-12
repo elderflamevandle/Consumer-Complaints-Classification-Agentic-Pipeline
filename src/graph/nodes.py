@@ -205,7 +205,6 @@ def root_cause_node(state: PipelineState) -> dict[str, Any]:
     t0 = time.monotonic()
     diagnosis = agent.diagnose(
         complaint_text=complaint_text,
-        classification=classification,
         thread_id=thread_id,
     )
     latency = int((time.monotonic() - t0) * 1000)
