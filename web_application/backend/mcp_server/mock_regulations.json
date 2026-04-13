@@ -1,0 +1,1184 @@
+{
+  "version": "0.2-regular-norms",
+  "description": "Generated dummy policy rules: all 50 states and all CFPB issue keys. Values are regular norms for simulation, not legal advice.",
+  "issue_key_count": 54,
+  "state_count": 50,
+  "state_codes": [
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  "issue_norms": {
+    "CREDIT_MONITORING_OR_IDENTITY_THEFT_PROTECTION_SERVICES": {
+      "sla_window": "10 calendar days",
+      "required_actions": [
+        "Secure account access and preserve evidence",
+        "Investigate disputed transactions and timeline",
+        "Provide interim status updates until resolution"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation E fraud/error handling",
+      "profile": "fraud_fast",
+      "issue_display": "Credit monitoring or identity theft protection services"
+    },
+    "IMPROPER_USE_OF_YOUR_REPORT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Validate furnishing data and dispute context",
+        "Coordinate reinvestigation where applicable",
+        "Send written correction or no-change rationale"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FCRA dispute/reinvestigation baseline",
+      "profile": "credit_reporting",
+      "issue_display": "Improper use of your report"
+    },
+    "INCORRECT_INFORMATION_ON_YOUR_REPORT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Validate furnishing data and dispute context",
+        "Coordinate reinvestigation where applicable",
+        "Send written correction or no-change rationale"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FCRA dispute/reinvestigation baseline",
+      "profile": "credit_reporting",
+      "issue_display": "Incorrect information on your report"
+    },
+    "PROBLEM_WITH_A_COMPANYS_INVESTIGATION_INTO_AN_EXISTING_PROBLEM": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem with a company's investigation into an existing problem"
+    },
+    "PROBLEM_WITH_FRAUD_ALERTS_OR_SECURITY_FREEZES": {
+      "sla_window": "10 calendar days",
+      "required_actions": [
+        "Secure account access and preserve evidence",
+        "Investigate disputed transactions and timeline",
+        "Provide interim status updates until resolution"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation E fraud/error handling",
+      "profile": "fraud_fast",
+      "issue_display": "Problem with fraud alerts or security freezes"
+    },
+    "UNABLE_TO_GET_YOUR_CREDIT_REPORT_OR_CREDIT_SCORE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Validate furnishing data and dispute context",
+        "Coordinate reinvestigation where applicable",
+        "Send written correction or no-change rationale"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FCRA dispute/reinvestigation baseline",
+      "profile": "credit_reporting",
+      "issue_display": "Unable to get your credit report or credit score"
+    },
+    "CLOSING_AN_ACCOUNT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Closing an account"
+    },
+    "MANAGING_AN_ACCOUNT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Managing an account"
+    },
+    "OPENING_AN_ACCOUNT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Opening an account"
+    },
+    "PROBLEM_CAUSED_BY_YOUR_FUNDS_BEING_LOW": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem caused by your funds being low"
+    },
+    "PROBLEM_WITH_A_LENDER_OR_OTHER_COMPANY_CHARGING_YOUR_ACCOUNT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem with a lender or other company charging your account"
+    },
+    "ADVERTISING_AND_MARKETING_INCLUDING_PROMOTIONAL_OFFERS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Advertising and marketing, including promotional offers"
+    },
+    "CLOSING_YOUR_ACCOUNT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Closing your account"
+    },
+    "FEES_OR_INTEREST": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Validate fee/interest or billing calculation",
+        "Pause incremental disputed penalties where applicable",
+        "Provide written findings and correction path"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation Z billing error framework",
+      "profile": "billing_standard",
+      "issue_display": "Fees or interest"
+    },
+    "GETTING_A_CREDIT_CARD": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Getting a credit card"
+    },
+    "OTHER_FEATURES_TERMS_OR_PROBLEMS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Other features, terms, or problems"
+    },
+    "PROBLEM_WHEN_MAKING_PAYMENTS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem when making payments"
+    },
+    "PROBLEM_WITH_A_PURCHASE_SHOWN_ON_YOUR_STATEMENT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem with a purchase shown on your statement"
+    },
+    "STRUGGLING_TO_PAY_YOUR_BILL": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Struggling to pay your bill"
+    },
+    "TROUBLE_USING_YOUR_CARD": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Trouble using your card"
+    },
+    "IDENTITY_THEFT_PROTECTION_OR_OTHER_MONITORING_SERVICES": {
+      "sla_window": "10 calendar days",
+      "required_actions": [
+        "Secure account access and preserve evidence",
+        "Investigate disputed transactions and timeline",
+        "Provide interim status updates until resolution"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation E fraud/error handling",
+      "profile": "fraud_fast",
+      "issue_display": "Identity theft protection or other monitoring services"
+    },
+    "PROBLEM_WITH_A_COMPANYS_INVESTIGATION_INTO_AN_EXISTING_ISSUE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Validate furnishing data and dispute context",
+        "Coordinate reinvestigation where applicable",
+        "Send written correction or no-change rationale"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FCRA dispute/reinvestigation baseline",
+      "profile": "credit_reporting",
+      "issue_display": "Problem with a company's investigation into an existing issue"
+    },
+    "ATTEMPTS_TO_COLLECT_DEBT_NOT_OWED": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Verify debt ownership/amount and notice compliance",
+        "Pause disputed collection actions while review is active",
+        "Provide written verification and next-step rights"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FDCPA validation/communication baseline",
+      "profile": "debt_collection",
+      "issue_display": "Attempts to collect debt not owed"
+    },
+    "COMMUNICATION_TACTICS": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Verify debt ownership/amount and notice compliance",
+        "Pause disputed collection actions while review is active",
+        "Provide written verification and next-step rights"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FDCPA validation/communication baseline",
+      "profile": "debt_collection",
+      "issue_display": "Communication tactics"
+    },
+    "ELECTRONIC_COMMUNICATIONS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Electronic communications"
+    },
+    "FALSE_STATEMENTS_OR_REPRESENTATION": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Verify debt ownership/amount and notice compliance",
+        "Pause disputed collection actions while review is active",
+        "Provide written verification and next-step rights"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FDCPA validation/communication baseline",
+      "profile": "debt_collection",
+      "issue_display": "False statements or representation"
+    },
+    "THREATENED_TO_CONTACT_SOMEONE_OR_SHARE_INFORMATION_IMPROPERLY": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Verify debt ownership/amount and notice compliance",
+        "Pause disputed collection actions while review is active",
+        "Provide written verification and next-step rights"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FDCPA validation/communication baseline",
+      "profile": "debt_collection",
+      "issue_display": "Threatened to contact someone or share information improperly"
+    },
+    "TOOK_OR_THREATENED_TO_TAKE_NEGATIVE_OR_LEGAL_ACTION": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Verify debt ownership/amount and notice compliance",
+        "Pause disputed collection actions while review is active",
+        "Provide written verification and next-step rights"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FDCPA validation/communication baseline",
+      "profile": "debt_collection",
+      "issue_display": "Took or threatened to take negative or legal action"
+    },
+    "WRITTEN_NOTIFICATION_ABOUT_DEBT": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Verify debt ownership/amount and notice compliance",
+        "Pause disputed collection actions while review is active",
+        "Provide written verification and next-step rights"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to FDCPA validation/communication baseline",
+      "profile": "debt_collection",
+      "issue_display": "Written notification about debt"
+    },
+    "CONFUSING_OR_MISLEADING_ADVERTISING_OR_MARKETING": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Confusing or misleading advertising or marketing"
+    },
+    "CONFUSING_OR_MISSING_DISCLOSURES": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Confusing or missing disclosures"
+    },
+    "FRAUD_OR_SCAM": {
+      "sla_window": "10 calendar days",
+      "required_actions": [
+        "Secure account access and preserve evidence",
+        "Investigate disputed transactions and timeline",
+        "Provide interim status updates until resolution"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation E fraud/error handling",
+      "profile": "fraud_fast",
+      "issue_display": "Fraud or scam"
+    },
+    "INCORRECT_EXCHANGE_RATE": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Validate fee/interest or billing calculation",
+        "Pause incremental disputed penalties where applicable",
+        "Provide written findings and correction path"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation Z billing error framework",
+      "profile": "billing_standard",
+      "issue_display": "Incorrect exchange rate"
+    },
+    "LOST_OR_STOLEN_MONEY_ORDER": {
+      "sla_window": "10 calendar days",
+      "required_actions": [
+        "Secure account access and preserve evidence",
+        "Investigate disputed transactions and timeline",
+        "Provide interim status updates until resolution"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation E fraud/error handling",
+      "profile": "fraud_fast",
+      "issue_display": "Lost or stolen money order"
+    },
+    "MANAGING_OPENING_OR_CLOSING_YOUR_MOBILE_WALLET_ACCOUNT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Managing, opening, or closing your mobile wallet account"
+    },
+    "MONEY_WAS_NOT_AVAILABLE_WHEN_PROMISED": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Money was not available when promised"
+    },
+    "OTHER_SERVICE_PROBLEM": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Other service problem"
+    },
+    "OTHER_TRANSACTION_PROBLEM": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Other transaction problem"
+    },
+    "OVERDRAFT_SAVINGS_OR_REWARDS_FEATURES": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Validate fee/interest or billing calculation",
+        "Pause incremental disputed penalties where applicable",
+        "Provide written findings and correction path"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation Z billing error framework",
+      "profile": "billing_standard",
+      "issue_display": "Overdraft, savings, or rewards features"
+    },
+    "PROBLEM_ADDING_MONEY": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem adding money"
+    },
+    "PROBLEM_WITH_CUSTOMER_SERVICE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Problem with customer service"
+    },
+    "TROUBLE_ACCESSING_FUNDS_IN_YOUR_MOBILE_OR_DIGITAL_WALLET": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy regular norm: general complaint baseline",
+      "profile": "service_general",
+      "issue_display": "Trouble accessing funds in your mobile or digital wallet"
+    },
+    "UNAUTHORIZED_TRANSACTIONS_OR_OTHER_TRANSACTION_PROBLEM": {
+      "sla_window": "10 calendar days",
+      "required_actions": [
+        "Secure account access and preserve evidence",
+        "Investigate disputed transactions and timeline",
+        "Provide interim status updates until resolution"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation E fraud/error handling",
+      "profile": "fraud_fast",
+      "issue_display": "Unauthorized transactions or other transaction problem"
+    },
+    "UNEXPECTED_OR_OTHER_FEES": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Validate fee/interest or billing calculation",
+        "Pause incremental disputed penalties where applicable",
+        "Provide written findings and correction path"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation Z billing error framework",
+      "profile": "billing_standard",
+      "issue_display": "Unexpected or other fees"
+    },
+    "WRONG_AMOUNT_CHARGED_OR_RECEIVED": {
+      "sla_window": "21 calendar days",
+      "required_actions": [
+        "Validate fee/interest or billing calculation",
+        "Pause incremental disputed penalties where applicable",
+        "Provide written findings and correction path"
+      ],
+      "regulatory_basis": "Dummy regular norm aligned to Regulation Z billing error framework",
+      "profile": "billing_standard",
+      "issue_display": "Wrong amount charged or received"
+    },
+    "APPLYING_FOR_A_MORTGAGE_OR_REFINANCING_AN_EXISTING_MORTGAGE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Applying for a mortgage or refinancing an existing mortgage"
+    },
+    "CLOSING_ON_A_MORTGAGE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Closing on a mortgage"
+    },
+    "STRUGGLING_TO_PAY_MORTGAGE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Struggling to pay mortgage"
+    },
+    "TROUBLE_DURING_PAYMENT_PROCESS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Trouble during payment process"
+    },
+    "GETTING_A_LOAN_OR_LEASE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Getting a loan or lease"
+    },
+    "MANAGING_THE_LOAN_OR_LEASE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Managing the loan or lease"
+    },
+    "PROBLEMS_AT_THE_END_OF_THE_LOAN_OR_LEASE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Problems at the end of the loan or lease"
+    },
+    "REPOSSESSION": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Repossession"
+    },
+    "STRUGGLING_TO_PAY_YOUR_LOAN": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Review account history and payment events",
+        "Confirm contractual terms and servicing obligations",
+        "Provide written determination and remediation steps"
+      ],
+      "regulatory_basis": "Dummy regular norm: lending-servicing baseline",
+      "profile": "lending",
+      "issue_display": "Struggling to pay your loan"
+    }
+  },
+  "state_defaults": {
+    "AL": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy AL state default norm"
+    },
+    "AK": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy AK state default norm"
+    },
+    "AZ": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy AZ state default norm"
+    },
+    "AR": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy AR state default norm"
+    },
+    "CA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy CA state default norm"
+    },
+    "CO": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy CO state default norm"
+    },
+    "CT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy CT state default norm"
+    },
+    "DE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy DE state default norm"
+    },
+    "FL": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy FL state default norm"
+    },
+    "GA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy GA state default norm"
+    },
+    "HI": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy HI state default norm"
+    },
+    "ID": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy ID state default norm"
+    },
+    "IL": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy IL state default norm"
+    },
+    "IN": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy IN state default norm"
+    },
+    "IA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy IA state default norm"
+    },
+    "KS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy KS state default norm"
+    },
+    "KY": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy KY state default norm"
+    },
+    "LA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy LA state default norm"
+    },
+    "ME": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy ME state default norm"
+    },
+    "MD": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MD state default norm"
+    },
+    "MA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MA state default norm"
+    },
+    "MI": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MI state default norm"
+    },
+    "MN": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MN state default norm"
+    },
+    "MS": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MS state default norm"
+    },
+    "MO": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MO state default norm"
+    },
+    "MT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy MT state default norm"
+    },
+    "NE": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NE state default norm"
+    },
+    "NV": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NV state default norm"
+    },
+    "NH": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NH state default norm"
+    },
+    "NJ": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NJ state default norm"
+    },
+    "NM": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NM state default norm"
+    },
+    "NY": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NY state default norm"
+    },
+    "NC": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy NC state default norm"
+    },
+    "ND": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy ND state default norm"
+    },
+    "OH": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy OH state default norm"
+    },
+    "OK": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy OK state default norm"
+    },
+    "OR": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy OR state default norm"
+    },
+    "PA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy PA state default norm"
+    },
+    "RI": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy RI state default norm"
+    },
+    "SC": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy SC state default norm"
+    },
+    "SD": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy SD state default norm"
+    },
+    "TN": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy TN state default norm"
+    },
+    "TX": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy TX state default norm"
+    },
+    "UT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy UT state default norm"
+    },
+    "VT": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy VT state default norm"
+    },
+    "VA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy VA state default norm"
+    },
+    "WA": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy WA state default norm"
+    },
+    "WV": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy WV state default norm"
+    },
+    "WI": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy WI state default norm"
+    },
+    "WY": {
+      "sla_window": "30 calendar days",
+      "required_actions": [
+        "Acknowledge complaint receipt",
+        "Open investigation and assign owner",
+        "Provide written update and final outcome"
+      ],
+      "regulatory_basis": "Dummy WY state default norm"
+    }
+  },
+  "state_overrides": {
+    "CA": {
+      "issues": {
+        "FEES_OR_INTEREST": {
+          "sla_window": "15 calendar days",
+          "regulatory_basis": "Dummy CA billing-accelerated norm"
+        },
+        "INCORRECT_EXCHANGE_RATE": {
+          "sla_window": "15 calendar days",
+          "regulatory_basis": "Dummy CA billing-accelerated norm"
+        },
+        "OVERDRAFT_SAVINGS_OR_REWARDS_FEATURES": {
+          "sla_window": "15 calendar days",
+          "regulatory_basis": "Dummy CA billing-accelerated norm"
+        },
+        "UNEXPECTED_OR_OTHER_FEES": {
+          "sla_window": "15 calendar days",
+          "regulatory_basis": "Dummy CA billing-accelerated norm"
+        },
+        "WRONG_AMOUNT_CHARGED_OR_RECEIVED": {
+          "sla_window": "15 calendar days",
+          "regulatory_basis": "Dummy CA billing-accelerated norm"
+        }
+      }
+    },
+    "NY": {
+      "issues": {
+        "CREDIT_MONITORING_OR_IDENTITY_THEFT_PROTECTION_SERVICES": {
+          "sla_window": "7 calendar days",
+          "regulatory_basis": "Dummy NY fraud-accelerated norm"
+        },
+        "PROBLEM_WITH_FRAUD_ALERTS_OR_SECURITY_FREEZES": {
+          "sla_window": "7 calendar days",
+          "regulatory_basis": "Dummy NY fraud-accelerated norm"
+        },
+        "IDENTITY_THEFT_PROTECTION_OR_OTHER_MONITORING_SERVICES": {
+          "sla_window": "7 calendar days",
+          "regulatory_basis": "Dummy NY fraud-accelerated norm"
+        },
+        "FRAUD_OR_SCAM": {
+          "sla_window": "7 calendar days",
+          "regulatory_basis": "Dummy NY fraud-accelerated norm"
+        },
+        "LOST_OR_STOLEN_MONEY_ORDER": {
+          "sla_window": "7 calendar days",
+          "regulatory_basis": "Dummy NY fraud-accelerated norm"
+        },
+        "UNAUTHORIZED_TRANSACTIONS_OR_OTHER_TRANSACTION_PROBLEM": {
+          "sla_window": "7 calendar days",
+          "regulatory_basis": "Dummy NY fraud-accelerated norm"
+        }
+      }
+    },
+    "TX": {
+      "issues": {
+        "FEES_OR_INTEREST": {
+          "sla_window": "21 calendar days",
+          "regulatory_basis": "Dummy TX billing norm"
+        },
+        "INCORRECT_EXCHANGE_RATE": {
+          "sla_window": "21 calendar days",
+          "regulatory_basis": "Dummy TX billing norm"
+        },
+        "OVERDRAFT_SAVINGS_OR_REWARDS_FEATURES": {
+          "sla_window": "21 calendar days",
+          "regulatory_basis": "Dummy TX billing norm"
+        },
+        "UNEXPECTED_OR_OTHER_FEES": {
+          "sla_window": "21 calendar days",
+          "regulatory_basis": "Dummy TX billing norm"
+        },
+        "WRONG_AMOUNT_CHARGED_OR_RECEIVED": {
+          "sla_window": "21 calendar days",
+          "regulatory_basis": "Dummy TX billing norm"
+        }
+      }
+    }
+  }
+}

@@ -6,6 +6,11 @@
 .ruff_cache/
 __pycache__/
 
+# Node
+node_modules/
+.next/
+web_application/frontend/.env.local
+
 cfpb_data/
 chroma_db/
 complaints.csv.zip

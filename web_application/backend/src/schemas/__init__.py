@@ -1,0 +1,1 @@
+"""Typed output schemas for complaint workflow contracts."""
