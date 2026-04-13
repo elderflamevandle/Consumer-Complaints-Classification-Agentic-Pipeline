@@ -1,0 +1,67 @@
+# ── Stage 1: Builder ──────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# Install build-time system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies into a prefix we can copy cleanly
+# Build context is the project root, so paths are relative to that.
+COPY web_application/backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
+
+# ── Stage 2: Runtime ──────────────────────────────────────────────────────────
+FROM python:3.11-slim AS runtime
+
+# Security: non-root user
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
+WORKDIR /app
+
+# Copy installed packages from builder (keeps runtime image slim — no gcc etc.)
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
+
+# Copy the canonical pipeline source (single source of truth — no more drift)
+COPY src/ ./src/
+
+# Copy the MCP policy server (needed by the remediator node at runtime)
+COPY mcp_server/ ./mcp_server/
+
+# Copy the web application backend
+COPY web_application/backend/ ./backend/
+
+# Remove the stale src/ copy bundled inside backend/ — canonical src/ above wins.
+RUN rm -rf /app/backend/src/
+
+# PYTHONPATH=/app  → src.*       resolves to /app/src/        (canonical pipeline)
+#                 → mcp_server.* resolves to /app/mcp_server/ (policy server module)
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+RUN chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+# Lightweight healthcheck that doesn't require curl
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
+  CMD python -c "import urllib.request, sys; \
+      r = urllib.request.urlopen('http://localhost:8000/health', timeout=4); \
+      sys.exit(0 if r.status == 200 else 1)"
+
+# Single worker — asyncio pipeline uses in-process queues; multiple workers
+# would break WebSocket→pipeline continuity without an external broker.
+CMD ["uvicorn", "backend.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--loop", "uvloop", \
+     "--http", "httptools", \
+     "--proxy-headers", \
+     "--forwarded-allow-ips=*"]

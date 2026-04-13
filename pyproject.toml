@@ -22,10 +22,15 @@ dependencies = [
   "langchain-core>=0.3.0",
   "groq>=1.1.2",
   "dotenv>=0.9.9",
+  "chromadb>=1.5.7",
+  "fastapi>=0.111.0",
+  "uvicorn[standard]>=0.30.0",
+  "httpx>=0.27.0",
+  "requests>=2.33.1",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src", "legal_knowledge_mcp"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

@@ -1,9 +1,15 @@
 .env
 .venv/
+.claude/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 __pycache__/
+
+# Node
+node_modules/
+.next/
+web_application/frontend/.env.local
 
 cfpb_data/
 chroma_db/
@@ -15,3 +21,10 @@ plan2.md
 tests/data_exploration.ipynb
 
 tests/outputs
+
+F:\Agentic_Hackathon\mcp_policy_lab\.env
+F:\Agentic_Hackathon\legal_knowledge_mcp\.env
+
+F:\Agentic_Hackathon\nonexistent_chroma_dir_xyz
+
+logs/*.log

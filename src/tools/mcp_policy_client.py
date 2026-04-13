@@ -10,19 +10,21 @@ from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from mcp_server.server import TOOL_GET_SLA
+from legal_knowledge_mcp.server import TOOL_GET_SLA
 
-DEFAULT_SERVER_PATH = Path('mcp_server/server.py')
+DEFAULT_SERVER_PATH = Path('legal_knowledge_mcp/server.py')
 
 
 class SLAPolicy(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
 
     issue_type: str = Field(min_length=1)
     state_code: str = Field(min_length=2, max_length=2)
     sla_window: str = Field(min_length=1)
     required_actions: list[str] = Field(min_length=1)
     regulatory_basis: str = Field(min_length=1)
+    product_type: str | None = None
+    legal_citations: list[dict[str, str]] = Field(default_factory=list)
 
 
 class PolicyLookupResult(BaseModel):
@@ -42,7 +44,7 @@ class MCPPolicyClient:
         self,
         *,
         server_path: Path = DEFAULT_SERVER_PATH,
-        timeout_seconds: float = 6.0,
+        timeout_seconds: float = 45.0,
         request_runner: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
     ) -> None:
         self.server_path = server_path
@@ -50,14 +52,23 @@ class MCPPolicyClient:
         self._request_runner = request_runner
         self.last_error: str | None = None
 
-    def get_sla_requirements(self, *, issue_type: str, state_code: str) -> PolicyLookupResult:
+    def get_sla_requirements(
+        self,
+        *,
+        issue_type: str,
+        state_code: str,
+        product_type: str | None = None,
+    ) -> PolicyLookupResult:
+        arguments: dict[str, str] = {
+            'issue_type': issue_type,
+            'state_code': state_code,
+        }
+        if product_type:
+            arguments['product_type'] = product_type
         response = self._invoke(
             {
                 'tool': TOOL_GET_SLA,
-                'arguments': {
-                    'issue_type': issue_type,
-                    'state_code': state_code,
-                },
+                'arguments': arguments,
             }
         )
 

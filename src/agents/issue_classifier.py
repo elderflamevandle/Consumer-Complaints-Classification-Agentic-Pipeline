@@ -43,11 +43,13 @@ class IssueClassifierAgent:
         self.last_llm_attempts = 0
         self.used_fallback = False
         self.last_model: str | None = None
+        self.last_total_tokens = 0
 
     def classify_issue(
         self,
         payload: IntakePreparation | str,
         product: ProductType,
+        product_reasoning: str = '',
     ) -> IssueClassificationResult:
         complaint_text = (
             payload
@@ -55,9 +57,14 @@ class IssueClassifierAgent:
             else payload.classifier_payload()["complaint_text"]
         )
 
-        prompt = build_issue_classifier_prompt(complaint_text, product)
+        prompt = build_issue_classifier_prompt(
+            complaint_text,
+            product,
+            product_reasoning=product_reasoning,
+        )
         self.last_llm_attempts = 0
         self.used_fallback = False
+        self.last_total_tokens = 0
 
         last_error: str = ""
         for attempt in range(self.repair_retries + 1):
@@ -71,12 +78,19 @@ class IssueClassifierAgent:
                 response_format=_JSON_RESPONSE_FORMAT,
             )
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             parsed, error = self._parse(response.text)
             if parsed is not None:
                 return parsed
             last_error = error
             if attempt < self.repair_retries:
-                prompt = build_issue_repair_prompt(complaint_text, product, response.text, error)
+                prompt = build_issue_repair_prompt(
+                    complaint_text,
+                    product,
+                    response.text,
+                    error,
+                    product_reasoning=product_reasoning,
+                )
 
         raise ValueError(
             f"IssueClassifier: schema validation failed after {self.repair_retries + 1} "
