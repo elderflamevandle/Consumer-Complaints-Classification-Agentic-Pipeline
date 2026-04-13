@@ -133,11 +133,30 @@ ISSUE_CLASSIFIER_SYSTEM_PROMPT = """\
 You are a specialized CFPB complaint analyst performing the second stage of \
 classification. The financial product has already been identified.
 
-Your tasks:
-1. Select the PRIMARY issue type from the numbered list provided — use the \
-EXACT string shown (copy it verbatim into the "issue" field).
+YOUR TASKS:
+1. Select the PRIMARY issue type from the allowed issue list for the already-identified product.
 2. Assess severity.
 3. Assess compliance/regulatory risk.
+4. Return only valid JSON in the required schema.
+
+OVERLAP DECISION POLICY:
+- Step 1: Identify the single main harm the consumer wants fixed.
+- Step 2: Match that harm to the closest exact issue label from the allowed list.
+- Step 3: Ignore secondary symptoms unless they are the main harm.
+
+TIE-BREAK RULES:
+- Choose the issue describing the root operational failure, not a downstream consequence.
+- Prefer a specific product workflow issue over a broad dissatisfaction or support issue.
+- If the complaint mentions fraud but the requested resolution is about investigation, reversal, billing, servicing, posting, or account handling, choose that operational issue instead of a broad fraud-adjacent interpretation.
+- If both "customer service" and a more concrete account/payment/transaction issue appear, choose the concrete issue unless the complaint is primarily about agent conduct, responsiveness, or communication quality.
+- If the complaint contains multiple incidents, select the issue most central to the requested remedy, financial harm, or regulatory concern.
+- Never invent, merge, shorten, or paraphrase issue labels. Use one exact label from the list only.
+
+HOW TO CHOOSE THE ISSUE:
+- Focus on what the institution allegedly failed to do, not only on the consumer's emotional reaction.
+- Prefer the issue label that best matches the complained-of workflow: account handling, payment handling, transaction handling, investigation, collections, servicing, or disclosures.
+- If the complaint mixes background context with one actionable request, classify the actionable request.
+- If the complaint describes many facts but one explicit ask, optimize for the explicit ask.
 
 SEVERITY:
 - CRITICAL: Active fraud, identity theft, regulatory violation, legal threat, \
@@ -154,12 +173,14 @@ COMPLIANCE RISK:
 
 OUTPUT RULES:
 1. Return ONLY a valid JSON object — no markdown, no explanation.
-2. The "issue" value MUST be copied verbatim from the numbered list provided.
-3. confidence > 0.85 only when the issue is unambiguous.
+2. The "issue" value MUST be copied verbatim from the allowed issue list.
+3. Do not return any issue label that is not present in the allowed issue list.
+4. confidence > 0.85 only when the issue is unambiguous.
+5. reasoning must be one short sentence grounded in the complaint facts.
 
 REQUIRED JSON SCHEMA:
 {
-  "issue": "<exact string from numbered list>",
+  "issue": "<exact string from allowed issue list>",
   "severity": "LOW|MEDIUM|HIGH|CRITICAL",
   "compliance_risk": "LOW|MEDIUM|HIGH",
   "confidence": <float 0.0-1.0>,
@@ -167,31 +188,70 @@ REQUIRED JSON SCHEMA:
 }
 """
 
+ISSUE_SEVERITY_COMPLIANCE_PROMPT = """\
+SEVERITY AND COMPLIANCE SCORING INSTRUCTIONS:
+- First decide the issue label.
+- Then score severity based on current consumer harm, urgency, and likely financial impact.
+- Then score compliance_risk based on likelihood of regulatory exposure, statutory handling obligations, and seriousness of process failure.
+- Keep severity and compliance_risk independent: a severe consumer impact can coexist with medium compliance risk, and vice versa.
+- Base both scores on the complaint facts, not on unsupported assumptions.
+- Do not change the issue label while assigning severity and compliance_risk.
+"""
 
-def build_issue_classifier_prompt(complaint_text: str, product: ProductType) -> str:
+
+def build_issue_classifier_prompt(
+    complaint_text: str,
+    product: ProductType,
+    product_reasoning: str = '',
+) -> str:
     display = get_display_name(product.value)
     issue_list = format_issue_list_for_prompt(product.value)
+    product_reasoning_block = (
+        f"PRODUCT CLASSIFIER REASONING:\n{product_reasoning}\n\n"
+        if product_reasoning.strip()
+        else ''
+    )
     return (
         f"IDENTIFIED PRODUCT: {display} ({product.value})\n\n"
-        f"VALID ISSUE TYPES FOR THIS PRODUCT (choose one verbatim):\n{issue_list}\n\n"
+        f"{product_reasoning_block}"
+        "ISSUE SELECTION INSTRUCTIONS:\n"
+        "- First determine the main harm.\n"
+        "- Then choose exactly one issue label from the allowed list below.\n"
+        "- Focus on the primary harm and requested resolution.\n"
+        "- Use the product-classifier reasoning as supporting context, not as a replacement for the complaint facts.\n"
+        "- Do not return a label that is not written exactly in the list.\n\n"
+        f"VALID ISSUE TYPES FOR THIS PRODUCT:\n{issue_list}\n\n"
+        f"{ISSUE_SEVERITY_COMPLIANCE_PROMPT}\n\n"
         f"COMPLAINT:\n{complaint_text}"
     )
 
 
 def build_issue_repair_prompt(
-    complaint_text: str, product: ProductType, bad_output: str, error: str
+    complaint_text: str,
+    product: ProductType,
+    bad_output: str,
+    error: str,
+    product_reasoning: str = '',
 ) -> str:
     display = get_display_name(product.value)
     issue_list = format_issue_list_for_prompt(product.value)
+    product_reasoning_block = (
+        f"PRODUCT CLASSIFIER REASONING:\n{product_reasoning}\n\n"
+        if product_reasoning.strip()
+        else ''
+    )
     return (
         f"Your previous output failed validation: {error}\n"
         "Return ONLY valid JSON with keys: issue, severity, compliance_risk, "
-        "confidence, reasoning. The issue must be copied verbatim from the list.\n\n"
-        f"PRODUCT: {display}\nVALID ISSUES:\n{issue_list}\n\n"
+        "confidence, reasoning. The issue must be copied verbatim from the list.\n"
+        "Do not invent labels. Do not paraphrase labels. Keep the same output schema.\n\n"
+        f"PRODUCT: {display}\n"
+        f"{product_reasoning_block}"
+        f"VALID ISSUES:\n{issue_list}\n\n"
+        f"{ISSUE_SEVERITY_COMPLIANCE_PROMPT}\n\n"
         f"COMPLAINT:\n{complaint_text}\n\nYOUR INVALID OUTPUT:\n{bad_output}"
     )
-
-
+    
 # ---------------------------------------------------------------------------
 # Root cause agent
 # ---------------------------------------------------------------------------
@@ -252,16 +312,6 @@ def build_remediator_prompt(
 ) -> str:
     assert policy.policy is not None
     policy_data = policy.policy
-    citation_lines = ''
-    for row in policy_data.legal_citations[:6]:
-        title = row.get('title', '')
-        url = row.get('url', '')
-        publisher = row.get('publisher', '')
-        if title or url:
-            citation_lines += f'  - {title} ({publisher}) — {url}\n'
-    citation_block = (
-        f'- legal_citations (verify at source):\n{citation_lines}' if citation_lines else ''
-    )
     return (
         'You are a CFPB-certified compliance remediation planner.\n'
         'Your role is to produce a legally grounded, ordered action plan that resolves the '
@@ -284,7 +334,6 @@ def build_remediator_prompt(
         f'- sla_window: {policy_data.sla_window}\n'
         f'- required_actions: {policy_data.required_actions}\n'
         f'- regulatory_basis: {policy_data.regulatory_basis}\n'
-        f'{citation_block}'
     )
 
 

@@ -188,7 +188,11 @@ def issue_classifier_node(state: PipelineState) -> dict[str, Any]:
 
     agent = _get_issue_classifier()
     t0 = time.monotonic()
-    issue_result = agent.classify_issue(intake, product_result.product)
+    issue_result = agent.classify_issue(
+        intake,
+        product_result.product,
+        product_reasoning=product_result.reasoning,
+    )
     latency = int((time.monotonic() - t0) * 1000)
 
     # Merge into the combined ClassificationResult for downstream compat
