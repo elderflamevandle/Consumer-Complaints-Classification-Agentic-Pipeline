@@ -17,7 +17,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-from src.graph.pipeline import build_graph, run_complaint
+from src.graph.pipeline import build_graph
 from src.schemas.taxonomy import PRODUCT_ISSUE_HIERARCHY, PRODUCT_DISPLAY_NAMES
 
 # ---------------------------------------------------------------------------
@@ -55,16 +55,16 @@ for _prod, _issue in _PICKS:
 # ---------------------------------------------------------------------------
 
 TEST_CASES = [
-    {
+        {
         "id":         "TC-01",
-        "product":    _PICKS[0][0],
-        "issue":      _PICKS[0][1],
-        "state_code": "CA",
+        "product":    _PICKS[2][0],
+        "issue":      _PICKS[2][1],
+        "state_code": "FL",
         "complaint": (
-            "My bank has been debiting an unauthorised $45 overdraft protection fee from my "
-            "checking account every month for six months. I never opted in to this service and "
-            "have asked them three times to stop and refund the charges. The deductions continue "
-            "and the customer service team keeps telling me to call back later."
+            "I have been unable to make my mortgage payments after a medical emergency wiped out "
+            "my savings. I submitted a hardship application for loan modification three months ago "
+            "but my servicer has not assigned a single point of contact and keeps losing my documents. "
+            "They sent a notice of default last week and I am afraid I will lose my home."
         ),
     },
     {
@@ -81,14 +81,14 @@ TEST_CASES = [
     },
     {
         "id":         "TC-03",
-        "product":    _PICKS[2][0],
-        "issue":      _PICKS[2][1],
-        "state_code": "FL",
+        "product":    _PICKS[0][0],
+        "issue":      _PICKS[0][1],
+        "state_code": "CA",
         "complaint": (
-            "I have been unable to make my mortgage payments after a medical emergency wiped out "
-            "my savings. I submitted a hardship application for loan modification three months ago "
-            "but my servicer has not assigned a single point of contact and keeps losing my documents. "
-            "They sent a notice of default last week and I am afraid I will lose my home."
+            "My bank has been debiting an unauthorised $45 overdraft protection fee from my "
+            "checking account every month for six months. I never opted in to this service and "
+            "have asked them three times to stop and refund the charges. The deductions continue "
+            "and the customer service team keeps telling me to call back later."
         ),
     },
     {
@@ -120,9 +120,70 @@ TEST_CASES = [
 DIVIDER = "=" * 70
 SECTION  = "-" * 70
 
+# Friendly labels for each LangGraph node name
+_NODE_LABELS = {
+    "intake_processor":   "[1] INTAKE",
+    "product_classifier": "[2] PRODUCT CLASSIFIER",
+    "issue_classifier":   "[3] ISSUE CLASSIFIER",
+    "root_cause":         "[4] ROOT CAUSE",
+    "remediator":         "[5] REMEDIATOR + MCP",
+    "response_writer":    "[6] WRITER",
+    "response_auditor":   "[7] AUDITOR",
+    "explainer":          "[8] EXPLAINER",
+}
+
+
+def _run_with_step_timing(graph, complaint_text: str, state_code: str) -> tuple[dict, list[tuple[str, float]]]:
+    """Run pipeline via .stream() and capture per-node wall-clock seconds.
+
+    Returns (final_state, step_timings) where step_timings is a list of
+    (node_name, seconds) in execution order.
+    """
+    import uuid
+    tid = str(uuid.uuid4())
+    initial_state = {
+        "thread_id": tid,
+        "raw_complaint": complaint_text,
+        "state_code": state_code,
+        "rewrite_count": 0,
+        "events": [],
+        "stage_telemetry": [],
+        "unresolved_issues": [],
+    }
+    run_config = {"configurable": {"thread_id": tid}}
+
+    step_timings: list[tuple[str, float]] = []
+    final_state: dict = dict(initial_state)
+    prev_time = time.monotonic()
+
+    for chunk in graph.stream(initial_state, config=run_config):
+        now = time.monotonic()
+        for node_name in chunk:
+            elapsed = now - prev_time
+            step_timings.append((node_name, elapsed))
+            final_state.update(chunk[node_name])
+        prev_time = now
+
+    return final_state, step_timings
+
 
 def _match_label(expected: str, actual: str) -> str:
     return "MATCH" if expected.strip().lower() == actual.strip().lower() else "MISMATCH"
+
+
+def print_step_timings(step_timings: list[tuple[str, float]]) -> None:
+    """Print a table of per-step execution times."""
+    print("\n  STEP TIMING BREAKDOWN")
+    print(SECTION)
+    print(f"  {'Step':<30} {'Time (s)':>10}")
+    print(f"  {'-'*29} {'-'*10}")
+    total = 0.0
+    for node_name, secs in step_timings:
+        label = _NODE_LABELS.get(node_name, node_name)
+        print(f"  {label:<30} {secs:>10.2f}")
+        total += secs
+    print(f"  {'-'*29} {'-'*10}")
+    print(f"  {'TOTAL':<30} {total:>10.2f}")
 
 
 def print_agent_output(case: dict, final_state: dict) -> None:
@@ -274,17 +335,19 @@ def main() -> None:
 
         started    = time.monotonic()
         final_state = None
+        step_timings: list[tuple[str, float]] = []
         passed      = False
         prod_match  = False
         issue_match = False
 
         try:
-            final_state = run_complaint(
+            final_state, step_timings = _run_with_step_timing(
                 graph,
                 complaint_text=case["complaint"],
                 state_code=case["state_code"],
             )
             print_agent_output(case, final_state)
+            print_step_timings(step_timings)
 
             classification = final_state.get("classification")
             if classification:
