@@ -341,6 +341,8 @@ def build_remediator_prompt(
 # Writer agent
 # ---------------------------------------------------------------------------
 
+UNCLEAR_FINDINGS_TEXT = "We appreciate you bringing this to our attention. We are doing a comprehensive review of your case details, and it is taking more than usual."
+
 def build_writer_prompt(
     *,
     complaint_text: str,
@@ -355,31 +357,35 @@ def build_writer_prompt(
     ) or '- No remediation steps available'
     policy_labels = ', '.join(get_policy_labels(remediation)) or 'None'
     critique_text = '\n'.join(f'- {item}' for item in unresolved_issues) or '- None'
+    
+    root_cause_display = diagnosis.root_cause
+    if "Insufficient retrieved evidence" in diagnosis.root_cause:
+        root_cause_display = UNCLEAR_FINDINGS_TEXT
+
     return (
         'You are a senior customer relations specialist at a regulated financial institution.\n'
         'You draft compliant, empathetic responses to CFPB consumer complaints.\n\n'
         'RESPONSE STRUCTURE (strict 4-block format):\n'
-        "1. ACKNOWLEDGMENT: Validate the consumer's concern without admitting fault. "
-        'Reference the specific issue type.\n'
-        '2. FINDINGS: Summarize what your review found, citing the root cause analysis. '
-        'Be factual and specific.\n'
-        '3. ACTION STEPS: List each remediation step clearly. Reference the policy '
-        'citations (e.g., "per Reg E §1005.11"). Be concrete, not vague.\n'
-        '4. TIMELINE / NEXT STEPS: State exact SLA timeframes from policy. Commit to '
-        'specific communication cadence.\n\n'
+        '1. INTERNAL (For the bank employee): Use third-person (e.g., "The consumer reported...").\n'
+        '   - resolution_summary: Summarize the case and resolution path the employee can take.\n'
+        '   - action_steps: These are the steps the employee should take to resolve the complaint. List each remediation step clearly referencing policies the employee should follow.\n'
+        '2. EXTERNAL (For the consumer): Use first/second person (e.g., "We received your complaint..."). Do NOT use clunky internal taxonomy categories directly. Be natural.\n'
+        '   - acknowledgment: Validate the concern without admitting fault.\n'
+        '   - findings: Summarize what your review found, citing the root cause analysis. Be factual and specific.\n'
+        '   - timeline: State exact SLA timeframes from policy. Commit to specific communication cadence.\n\n'
         'GUARDRAILS:\n'
         '- NEVER admit liability, say "our fault", or use "guarantee"/"promise".\n'
         '- NEVER overcommit to timelines not supported by the policy SLA.\n'
         '- ALWAYS surface every policy citation label from the remediation plan.\n'
         '- Use plain English — avoid jargon. The consumer must understand every step.\n'
         '- Tone: professional, empathetic, confident, compliant.\n\n'
-        'Return ONLY valid JSON with keys: resolution_statement, acknowledgment, '
-        'findings, action_steps, timeline_next_steps, policy_citation_labels, '
-        'critique_items_addressed.\n\n'
+        'Return ONLY valid JSON with keys: "internal" (object with "resolution_summary", '
+        '"action_steps"), "external" (object with "acknowledgment", "findings", "timeline"), '
+        '"policy_citation_labels" (array), "critique_items_addressed" (array).\n\n'
         f'Complaint:\n{complaint_text}\n\n'
         f'Classification: product={classification.product_type.value} '
         f'issue={classification.issue_type.value}\n'
-        f'Root cause: {diagnosis.root_cause}\n'
+        f'Root cause: {root_cause_display}\n'
         f'Remediation steps:\n{remediation_steps}\n'
         f'Policy labels to surface:\n{policy_labels}\n'
         f'Unresolved critique items to address first:\n{critique_text}'
@@ -403,9 +409,10 @@ def build_writer_repair_prompt(
         unresolved_issues=unresolved_issues,
     )
     return (
-        'Previous writer output failed schema validation. Return ONLY valid JSON with keys '
-        'resolution_statement, acknowledgment, findings, action_steps, timeline_next_steps, '
-        'policy_citation_labels, critique_items_addressed. No markdown or explanation.\n\n'
+        'Previous writer output failed schema validation. Return ONLY valid JSON with '
+        'keys: "internal" (with "resolution_summary", "action_steps"), "external" (with '
+        '"acknowledgment", "findings", "timeline"), "policy_citation_labels", and '
+        '"critique_items_addressed". No markdown or explanation.\n\n'
         f'{base}\n\n'
         f'Invalid output:\n{invalid_output}'
     )
@@ -433,7 +440,7 @@ def build_auditor_prompt(*, draft: ResponseDraft, remediation: RemediationResult
         'must_fix_items, rewrite_recommended.\n'
         'Use verdict PASS or FAIL.\n\n'
         f'Expected policy labels: {policy_labels}\n\n'
-        f'Response draft:\n{draft.render_text()}'
+        f'Response draft:\n{draft.render_internal_view()}\n\n{draft.render_external_response()}'
     )
 
 
