@@ -202,10 +202,12 @@ class ExplainerAgent:
             ExplanationBullet(
                 stage='response',
                 summary=(
-                    f'Final response states: {final_response.resolution_statement} '
-                    f'It preserves the four-block customer format.'
+                    f'Writer generated draft mapping {len(final_response.internal.action_steps)} '
+                    'remediation steps to policy outcomes. '
+                    f'Final response states: {final_response.internal.resolution_summary} '
+                    f'(SLA: {final_response.external.timeline})'
                 ),
-                citations=list(final_response.policy_citation_labels),
+                citations=[remediation.action_plan[0].policy_reference] if remediation.action_plan else [],
             ),
             ExplanationBullet(
                 stage='audit',

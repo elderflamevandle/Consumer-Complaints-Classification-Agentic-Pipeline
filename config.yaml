@@ -1,0 +1,54 @@
+# FinComplaint AI — Central Pipeline Configuration
+# All model assignments and tuneable parameters live here.
+# API keys and secrets stay in .env (never in this file).
+
+# ---------------------------------------------------------------------------
+# LLM Models
+# ---------------------------------------------------------------------------
+models:
+  # Fallback chain tried in order when the primary model fails
+  fallback_chain:
+    - "llama-3.3-70b-versatile"
+    - "llama-3.1-8b-instant"
+
+  # Per-agent primary model assignments
+  # Rule: agents that use JSON mode must NOT use thinking/reasoning models
+  # (e.g. qwen3) because <think> blocks break Groq's json_validate enforcement.
+  agents:
+    classifier:        "llama-3.3-70b-versatile"
+    issue_classifier:  "llama-3.3-70b-versatile"
+    product_classifier: "llama-3.3-70b-versatile"
+    root_cause:        "llama-3.3-70b-versatile"   # was qwen/qwen3-32b — caused json_validate_failed
+    remediator:        "llama-3.3-70b-versatile"   # was qwen/qwen3-32b — caused json_validate_failed
+    auditor:           "llama-3.3-70b-versatile"   # was qwen/qwen3-32b — caused json_validate_failed
+    writer:            "llama-3.3-70b-versatile"
+    explainer:         "llama-3.3-70b-versatile"
+    default:           "llama-3.1-8b-instant"
+
+# ---------------------------------------------------------------------------
+# Groq API settings (non-secret tuneable values)
+# ---------------------------------------------------------------------------
+groq:
+  base_url:              "https://api.groq.com/openai/v1"
+  timeout_seconds:       45.0
+  max_retries:           3
+  backoff_base_seconds:  1.0
+  backoff_max_seconds:   8.0
+  daily_token_budget:    200000
+
+# ---------------------------------------------------------------------------
+# Vector search + HuggingFace reranker
+# ---------------------------------------------------------------------------
+vector_search:
+  candidate_pool:    10          # records fetched from ChromaDB before reranking
+  final_limit:        5          # top-k returned after reranking
+  rerank_model:      "BAAI/bge-reranker-v2-m3"
+  hf_api_base:       "https://router.huggingface.co/hf-inference/models"
+  rerank_timeout_s:  30
+
+# ---------------------------------------------------------------------------
+# Data paths
+# ---------------------------------------------------------------------------
+paths:
+  data_dir:    "data"
+  chroma_dir:  "chroma_db"

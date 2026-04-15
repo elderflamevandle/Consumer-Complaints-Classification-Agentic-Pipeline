@@ -80,7 +80,11 @@ def main():
     # 6. Final Writer Agent Output
     print("\n✉️ FINAL APPROVED CUSTOMER RESPONSE (Writer Agent):")
     print("*" * 60)
-    print(final_state.get("response_draft"))
+    draft = final_state.get("response_draft")
+    if draft is not None:
+        print(draft.model_dump_json(indent=2))
+    else:
+        print("No response draft generated.")
     print("*" * 60)
 
 if __name__ == "__main__":

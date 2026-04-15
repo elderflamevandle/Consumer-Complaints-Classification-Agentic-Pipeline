@@ -1,37 +1,67 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, Shield, Layers, Plus, Pencil, X, Check, Loader2, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { Users, Layers, Plus, Pencil, X, Check, Loader2, AlertTriangle, FileText, BarChart3, ArrowUpRight, Terminal, Search, RefreshCw } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { useAuthStore } from '@/store/auth'
-import { adminApi } from '@/lib/api-client'
+import { adminApi, complaintsApi } from '@/lib/api-client'
 import { Badge } from '@/components/ui/badge'
-import { formatDate } from '@/lib/utils'
+import { formatDate, statusColor, severityColor } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import type { Team, User, AuditEvent } from '@/types'
+import type { Team, User, Complaint, DashboardStats } from '@/types'
 
-type Tab = 'users' | 'teams' | 'audit'
+type Tab = 'users' | 'teams' | 'complaints' | 'reports' | 'logs'
+
+type LogEntry = {
+  _id: string; timestamp: string; level: string; level_no: number
+  logger: string; message: string; module: string; func: string
+  line: number; exc_text: string | null
+}
 
 const ISSUE_TYPES   = ['FRAUD','BILLING','IDENTITY_THEFT','PAYMENT','CREDIT_REPORTING','CUSTOMER_SERVICE']
 const PRODUCT_TYPES = ['CREDIT_CARD','MORTGAGE','LOAN','BANK_ACCOUNT','DEBT_COLLECTION','MONEY_TRANSFER']
 
 const ROUTING_REF = [
-  { issue: 'FRAUD',           slug: 'fraud-security' },
-  { issue: 'BILLING',         slug: 'billing-resolution' },
-  { issue: 'IDENTITY_THEFT',  slug: 'identity-protection' },
-  { issue: 'PAYMENT',         slug: 'payments-ops' },
-  { issue: 'CREDIT_REPORTING',slug: 'credit-bureau' },
-  { issue: 'CUSTOMER_SERVICE',slug: 'cx-escalations' },
+  { issue: 'Fraud / Unauthorized Access', slug: 'fraud-security' },
+  { issue: 'Credit Report / Identity Theft', slug: 'credit-reporting' },
+  { issue: 'Debt Collection',             slug: 'debt-collection' },
+  { issue: 'Money Transfer / Prepaid',    slug: 'money-transfer' },
+  { issue: 'Credit Card',                 slug: 'credit-card' },
+  { issue: 'Checking / Savings Account',  slug: 'checking-savings-account' },
+  { issue: 'Mortgage',                    slug: 'mortgage' },
+  { issue: 'Vehicle Loan & Lease',        slug: 'vehicle-loan-lease' },
 ]
 
 function toSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-const TAB_ICONS = {
-  users: <Users className="h-4 w-4" />,
-  teams: <Layers className="h-4 w-4" />,
-  audit: <Shield className="h-4 w-4" />,
+const STATUS_OPTIONS = ['', 'pending', 'processing', 'interrupted', 'complete', 'rejected', 'failed']
+const STATUS_LABELS: Record<string, string> = {
+  '': 'All', pending: 'Pending', processing: 'Processing',
+  interrupted: 'Review', complete: 'Complete', rejected: 'Rejected', failed: 'Failed',
+}
+const SEVERITY_OPTIONS = ['', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+const PRODUCT_OPTIONS = [
+  '', 'CREDIT_CARD', 'CHECKING_SAVINGS_ACCOUNT', 'CREDIT_REPORTING',
+  'MORTGAGE', 'VEHICLE_LOAN_LEASE', 'MONEY_TRANSFER', 'DEBT_COLLECTION',
+]
+
+const TAB_ICONS: Record<Tab, React.ReactNode> = {
+  users:      <Users className="h-4 w-4" />,
+  teams:      <Layers className="h-4 w-4" />,
+  complaints: <FileText className="h-4 w-4" />,
+  reports:    <BarChart3 className="h-4 w-4" />,
+  logs:       <Terminal className="h-4 w-4" />,
+}
+
+const LOG_LEVEL_STYLE: Record<string, string> = {
+  DEBUG:    'bg-white/[0.06] text-muted-foreground border-white/[0.08]',
+  INFO:     'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  WARNING:  'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  ERROR:    'bg-red-500/10 text-red-400 border-red-500/20',
+  CRITICAL: 'bg-red-600/15 text-red-300 border-red-600/30',
 }
 
 export default function AdminPage() {
@@ -39,10 +69,44 @@ export default function AdminPage() {
   const { user, isAuthenticated, loadUser } = useAuthStore()
   const [users, setUsers]             = useState<User[]>([])
   const [teams, setTeams]             = useState<Team[]>([])
-  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
   const [loading, setLoading]         = useState(true)
   const [activeTab, setActiveTab]     = useState<Tab>('users')
   const [pageError, setPageError]     = useState<string | null>(null)
+
+  // Complaints tab state
+  const [complaints, setComplaints]       = useState<Complaint[]>([])
+  const [complaintsTotal, setComplaintsTotal] = useState(0)
+  const [complaintsLoading, setComplaintsLoading] = useState(false)
+  const [cPage, setCPage]                 = useState(0)
+  const [cStatuses, setCStatuses]         = useState<string[]>([])
+  const [cProducts, setCProducts]         = useState<string[]>([])
+  const [cSeverities, setCseverities]     = useState<string[]>([])
+  const [cTeams, setCTeams]               = useState<string[]>([])
+  const C_PAGE_SIZE = 20
+
+  const hasFilters = cStatuses.length > 0 || cProducts.length > 0 || cSeverities.length > 0 || cTeams.length > 0
+
+  const toggleFilter = (val: string, list: string[], setter: (v: string[]) => void) => {
+    setter(list.includes(val) ? list.filter((x) => x !== val) : [...list, val])
+    setCPage(0)
+  }
+  const clearFilters = () => { setCStatuses([]); setCProducts([]); setCseverities([]); setCTeams([]); setCPage(0) }
+
+  // Reports tab state
+  const [stats, setStats]             = useState<DashboardStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+
+  // Logs tab state
+  const [logs, setLogs]               = useState<LogEntry[]>([])
+  const [logsTotal, setLogsTotal]     = useState(0)
+  const [logsByLevel, setLogsByLevel] = useState<Record<string, number>>({})
+  const [logComponents, setLogComponents] = useState<string[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logMinLevel, setLogMinLevel] = useState('WARNING')
+  const [logComponent, setLogComponent] = useState('')
+  const [logSearch, setLogSearch]     = useState('')
+  const [logHours, setLogHours]       = useState(24)
+  const [expandedLog, setExpandedLog] = useState<string | null>(null)
 
   // Team form state
   const [showTeamForm, setShowTeamForm]       = useState(false)
@@ -66,15 +130,66 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'admin') return
-    Promise.all([adminApi.users(100), adminApi.listTeams(), adminApi.systemAudit(50)])
-      .then(([uRes, tRes, aRes]) => {
+    Promise.all([adminApi.users(100), adminApi.listTeams()])
+      .then(([uRes, tRes]) => {
         setUsers((uRes.data as any).items)
         setTeams((tRes.data as any).items)
-        setAuditEvents((aRes.data as any).events)
       })
       .catch(() => setPageError('Failed to load admin data'))
       .finally(() => setLoading(false))
   }, [isAuthenticated, user])
+
+  // Load complaints when tab/filters change
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== 'admin' || activeTab !== 'complaints') return
+    setComplaintsLoading(true)
+    complaintsApi.list({
+      status_filter:   cStatuses.length  ? cStatuses.join(',')   : undefined,
+      product_filter:  cProducts.length  ? cProducts.join(',')   : undefined,
+      severity_filter: cSeverities.length ? cSeverities.join(',') : undefined,
+      team_filter:     cTeams.length     ? cTeams.join(',')      : undefined,
+      limit: C_PAGE_SIZE,
+      skip: cPage * C_PAGE_SIZE,
+    }).then((res) => {
+      setComplaints(res.data.items)
+      setComplaintsTotal(res.data.total)
+    }).catch(() => setPageError('Failed to load complaints'))
+    .finally(() => setComplaintsLoading(false))
+  }, [isAuthenticated, user, activeTab, cStatuses, cProducts, cSeverities, cTeams, cPage])
+
+  // Load stats when Reports tab opens
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== 'admin' || activeTab !== 'reports') return
+    if (stats) return  // already loaded
+    setStatsLoading(true)
+    adminApi.stats()
+      .then((res) => setStats(res.data))
+      .catch(() => setPageError('Failed to load report data'))
+      .finally(() => setStatsLoading(false))
+  }, [isAuthenticated, user, activeTab])
+
+  // Logs tab — fetch when tab active or filters change
+  const fetchLogs = () => {
+    if (!isAuthenticated || user?.role !== 'admin') return
+    setLogsLoading(true)
+    adminApi.logs({
+      min_level: logMinLevel,
+      component: logComponent || undefined,
+      search: logSearch || undefined,
+      since_hours: logHours,
+      limit: 200,
+    }).then((res) => {
+      setLogs(res.data.logs)
+      setLogsTotal(res.data.total)
+      setLogsByLevel(res.data.by_level)
+      setLogComponents(res.data.components)
+    }).catch(() => setPageError('Failed to load logs'))
+    .finally(() => setLogsLoading(false))
+  }
+  useEffect(() => {
+    if (activeTab !== 'logs') return
+    fetchLogs()
+  }, [isAuthenticated, user, activeTab, logMinLevel, logComponent, logHours])
 
   const handleRoleChange = async (userId: string, role: string) => {
     if (!confirm(`Change role to "${role}"?`)) return
@@ -177,7 +292,7 @@ export default function AdminPage() {
 
         {/* ── Tabs ──────────────────────────────────────────── */}
         <div className="mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-card p-1 w-fit animate-fade-up delay-75">
-          {(['users', 'teams', 'audit'] as Tab[]).map((tab) => (
+          {(['users', 'teams', 'complaints', 'reports', 'logs'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -487,47 +602,453 @@ export default function AdminPage() {
         )}
 
         {/* ═════════════════════════════════════════════════════
-            AUDIT TAB
+            COMPLAINTS TAB
             ════════════════════════════════════════════════════ */}
-        {activeTab === 'audit' && (
-          <div className="glass-card overflow-hidden animate-fade-up delay-150">
-            <div className="border-b border-white/[0.06] px-5 py-4">
-              <h2 className="text-sm font-semibold text-foreground">System Audit Log</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{auditEvents.length} recent events</p>
+        {activeTab === 'complaints' && (
+          <div className="space-y-5 animate-fade-up delay-150">
+
+            {/* Filters */}
+            <div className="glass-card p-5 space-y-4">
+
+              {/* Row 1 — Status */}
+              <div>
+                <p className="section-label mb-2">Status</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUS_OPTIONS.filter(s => s !== '').map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => toggleFilter(s, cStatuses, setCStatuses)}
+                      className={cn(
+                        'rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 border',
+                        cStatuses.includes(s)
+                          ? 'bg-primary/20 border-primary/50 text-primary'
+                          : 'border-white/[0.08] bg-white/[0.04] text-muted-foreground hover:border-white/[0.16] hover:text-foreground'
+                      )}
+                    >
+                      {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 2 — Product Type */}
+              <div>
+                <p className="section-label mb-2">Product Type</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRODUCT_OPTIONS.filter(p => p !== '').map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => toggleFilter(p, cProducts, setCProducts)}
+                      className={cn(
+                        'rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 border',
+                        cProducts.includes(p)
+                          ? 'bg-primary/20 border-primary/50 text-primary'
+                          : 'border-white/[0.08] bg-white/[0.04] text-muted-foreground hover:border-white/[0.16] hover:text-foreground'
+                      )}
+                    >
+                      {p.replace(/_/g, ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 3 — Severity */}
+              <div>
+                <p className="section-label mb-2">Severity</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SEVERITY_OPTIONS.filter(s => s !== '').map((s) => {
+                    const COLOR: Record<string, string> = {
+                      LOW:      'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
+                      MEDIUM:   'bg-amber-500/15 border-amber-500/40 text-amber-400',
+                      HIGH:     'bg-orange-500/15 border-orange-500/40 text-orange-400',
+                      CRITICAL: 'bg-red-500/15 border-red-500/40 text-red-400',
+                    }
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => toggleFilter(s, cSeverities, setCseverities)}
+                        className={cn(
+                          'rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 border',
+                          cSeverities.includes(s)
+                            ? COLOR[s]
+                            : 'border-white/[0.08] bg-white/[0.04] text-muted-foreground hover:border-white/[0.16] hover:text-foreground'
+                        )}
+                      >
+                        {s}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Row 4 — Team */}
+              {teams.filter(t => t.is_active).length > 0 && (
+                <div>
+                  <p className="section-label mb-2">Team</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {teams.filter(t => t.is_active).map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => toggleFilter(t.id, cTeams, setCTeams)}
+                        className={cn(
+                          'rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 border',
+                          cTeams.includes(t.id)
+                            ? 'bg-violet-500/15 border-violet-500/40 text-violet-300'
+                            : 'border-white/[0.08] bg-white/[0.04] text-muted-foreground hover:border-white/[0.16] hover:text-foreground'
+                        )}
+                      >
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Active filter summary + clear */}
+              {hasFilters && (
+                <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
+                  <span className="text-xs text-muted-foreground">
+                    {[...cStatuses, ...cProducts, ...cSeverities].length +
+                     (cTeams.length > 0 ? cTeams.length : 0)} filter{(cStatuses.length + cProducts.length + cSeverities.length + cTeams.length) !== 1 ? 's' : ''} active
+                  </span>
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center gap-1 rounded-full border border-white/[0.10] bg-white/[0.04] px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-white/[0.20] transition-all"
+                  >
+                    <X className="h-3 w-3" /> Clear all
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="divide-y divide-white/[0.04]">
-              {auditEvents.length === 0 ? (
-                <div className="py-12 text-center text-sm text-muted-foreground">No audit events</div>
-              ) : auditEvents.map((ev) => {
-                const category = ev.action.split('_')[0]
-                const COLORS: Record<string, string> = {
-                  TEAM:      'bg-violet-500/15 text-violet-400 border-violet-500/25',
-                  USER:      'bg-primary/15 text-indigo-400 border-primary/25',
-                  PIPELINE:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-                  COMPLAINT: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
-                }
-                return (
-                  <div key={ev.id} className="flex items-start gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
-                    <span className={cn(
-                      'mt-0.5 inline-flex flex-shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide',
-                      COLORS[category] ?? 'bg-white/[0.06] text-muted-foreground border-white/10'
-                    )}>
-                      {category}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground/80">{ev.action.replace(/_/g, ' ')}</p>
-                      {ev.entity_id && (
-                        <p className="font-mono text-[10px] text-muted-foreground/60">
-                          entity: {ev.entity_id.slice(0, 16)}…
-                        </p>
+
+            {/* Complaints table */}
+            <div className="glass-card overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3.5">
+                <p className="text-xs text-muted-foreground">
+                  {complaintsTotal.toLocaleString()} complaint{complaintsTotal !== 1 ? 's' : ''}
+                  {hasFilters ? ' · filtered' : ''}
+                </p>
+              </div>
+
+              {complaintsLoading ? (
+                <div className="space-y-0">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 border-b border-white/[0.04] px-5 py-4">
+                      <div className="skeleton h-3 w-1/2 rounded" /><div className="skeleton ml-auto h-5 w-16 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : complaints.length === 0 ? (
+                <div className="py-16 text-center text-sm text-muted-foreground">No complaints match the current filters</div>
+              ) : (
+                <>
+                  <div className="hidden border-b border-white/[0.06] px-5 py-3 sm:grid sm:grid-cols-[1fr_150px_90px_100px_130px_100px_28px] gap-3">
+                    {['Complaint', 'Product Type', 'Severity', 'Status', 'Team', 'Created', ''].map((h) => (
+                      <span key={h} className="section-label">{h}</span>
+                    ))}
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {complaints.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/complaints/${c.id}`}
+                        className="group grid cursor-pointer items-center gap-3 px-5 py-4 transition-colors hover:bg-white/[0.03]
+                                   grid-cols-1 sm:grid-cols-[1fr_150px_90px_100px_130px_100px_28px]"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground/90 group-hover:text-foreground transition-colors">
+                            {c.scrubbed_text?.slice(0, 65) ?? `#${c.id.slice(0, 8)}`}
+                            {(c.scrubbed_text?.length ?? 0) > 65 ? '…' : ''}
+                          </p>
+                          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground/60">{c.id.slice(0, 12)}</p>
+                        </div>
+                        <span className="hidden text-xs text-muted-foreground sm:block truncate">
+                          {c.classification?.product_type?.replace(/_/g, ' ') ?? '—'}
+                        </span>
+                        <div className="hidden sm:block">
+                          {c.classification
+                            ? <Badge variant={severityColor(c.classification.severity) as any}>{c.classification.severity}</Badge>
+                            : <span className="text-xs text-muted-foreground/40">—</span>}
+                        </div>
+                        <div><Badge variant={statusColor(c.status) as any}>{c.status}</Badge></div>
+                        <span className="hidden text-xs text-muted-foreground sm:block truncate">{c.assigned_team ?? '—'}</span>
+                        <span className="hidden font-mono text-[10px] text-muted-foreground/60 sm:block whitespace-nowrap">
+                          {formatDate(c.created_at)}
+                        </span>
+                        <ArrowUpRight className="hidden h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-muted-foreground/70 sm:block" />
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-3.5">
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      {cPage * C_PAGE_SIZE + 1}–{Math.min((cPage + 1) * C_PAGE_SIZE, complaintsTotal)} of {complaintsTotal.toLocaleString()}
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setCPage((p) => Math.max(0, p - 1))} disabled={cPage === 0}
+                        className="btn-outline py-1.5 px-3 text-xs disabled:opacity-30">Previous</button>
+                      <button onClick={() => setCPage((p) => p + 1)} disabled={(cPage + 1) * C_PAGE_SIZE >= complaintsTotal}
+                        className="btn-outline py-1.5 px-3 text-xs disabled:opacity-30">Next</button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════
+            REPORTS TAB (Classification Detail)
+            ════════════════════════════════════════════════════ */}
+        {activeTab === 'reports' && (
+          <div className="animate-fade-up delay-150">
+            {statsLoading ? (
+              <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" /><span className="text-sm">Loading reports…</span>
+              </div>
+            ) : stats ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+                {/* Totals */}
+                <div className="glass-card p-5 sm:col-span-2 lg:col-span-3">
+                  <p className="section-label mb-3">Overview</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                      { label: 'Total Complaints', value: stats.totals.complaints },
+                      { label: 'Pending / Processing', value: stats.totals.pending },
+                      { label: 'Awaiting Review', value: stats.totals.interrupted_awaiting_review },
+                      { label: 'Last 7 Days', value: stats.totals.last_7_days },
+                    ].map((s) => (
+                      <div key={s.label}>
+                        <p className="font-serif text-2xl text-foreground">{s.value.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* By product type */}
+                <div className="glass-card overflow-hidden">
+                  <div className="border-b border-white/[0.06] px-5 py-3.5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">By Product Type</h3>
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {stats.by_product.length === 0 ? (
+                      <p className="px-5 py-8 text-xs text-muted-foreground text-center">No data yet</p>
+                    ) : stats.by_product.map((p, i) => (
+                      <div key={i} className="flex items-center gap-3 px-5 py-3">
+                        <span className="flex-1 text-xs text-foreground/80 truncate">
+                          {(p.product ?? 'Unknown').replace(/_/g, ' ')}
+                        </span>
+                        <span className="font-mono text-sm font-bold text-foreground">{p.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* By severity */}
+                <div className="glass-card overflow-hidden">
+                  <div className="border-b border-white/[0.06] px-5 py-3.5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">By Severity</h3>
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {Object.entries(stats.by_severity).length === 0 ? (
+                      <p className="px-5 py-8 text-xs text-muted-foreground text-center">No data yet</p>
+                    ) : Object.entries(stats.by_severity).map(([sev, cnt]) => (
+                      <div key={sev} className="flex items-center gap-3 px-5 py-3">
+                        <Badge variant={severityColor(sev) as any}>{sev}</Badge>
+                        <span className="ml-auto font-mono text-sm font-bold text-foreground">{cnt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* By status */}
+                <div className="glass-card overflow-hidden">
+                  <div className="border-b border-white/[0.06] px-5 py-3.5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">By Status</h3>
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {Object.entries(stats.by_status).length === 0 ? (
+                      <p className="px-5 py-8 text-xs text-muted-foreground text-center">No data yet</p>
+                    ) : Object.entries(stats.by_status).map(([st, cnt]) => (
+                      <div key={st} className="flex items-center gap-3 px-5 py-3">
+                        <Badge variant={statusColor(st) as any}>{st}</Badge>
+                        <span className="ml-auto font-mono text-sm font-bold text-foreground">{cnt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            ) : (
+              <div className="py-16 text-center text-sm text-muted-foreground">Failed to load report data</div>
+            )}
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════
+            LOGS TAB
+            ════════════════════════════════════════════════════ */}
+        {activeTab === 'logs' && (
+          <div className="space-y-4 animate-fade-up delay-150">
+
+            {/* Summary bar */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Critical', key: 'CRITICAL', color: 'text-red-300', bg: 'bg-red-600/10 border-red-600/20' },
+                { label: 'Errors',   key: 'ERROR',    color: 'text-red-400',  bg: 'bg-red-500/10 border-red-500/20' },
+                { label: 'Warnings', key: 'WARNING',  color: 'text-amber-400',bg: 'bg-amber-500/10 border-amber-500/20' },
+                { label: 'Info',     key: 'INFO',     color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+              ].map(({ label, key, color, bg }) => (
+                <div key={key} className={`rounded-xl border p-4 ${bg}`}>
+                  <p className="text-xs text-muted-foreground mb-1">{label} (window)</p>
+                  <p className={`text-2xl font-bold font-mono ${color}`}>{logsByLevel[key] ?? 0}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Filter bar */}
+            <div className="glass-card px-5 py-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Min level */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Min level</span>
+                  <select
+                    value={logMinLevel}
+                    onChange={(e) => setLogMinLevel(e.target.value)}
+                    className="field h-8 py-0 text-xs pr-6"
+                  >
+                    {['DEBUG','INFO','WARNING','ERROR','CRITICAL'].map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Time window */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Window</span>
+                  <select
+                    value={logHours}
+                    onChange={(e) => setLogHours(Number(e.target.value))}
+                    className="field h-8 py-0 text-xs pr-6"
+                  >
+                    <option value={1}>Last 1h</option>
+                    <option value={6}>Last 6h</option>
+                    <option value={24}>Last 24h</option>
+                    <option value={168}>Last 7d</option>
+                    <option value={720}>Last 30d</option>
+                  </select>
+                </div>
+
+                {/* Component */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Component</span>
+                  <select
+                    value={logComponent}
+                    onChange={(e) => setLogComponent(e.target.value)}
+                    className="field h-8 py-0 text-xs pr-6 max-w-[180px]"
+                  >
+                    <option value="">All</option>
+                    {logComponents.map((c) => (
+                      <option key={c} value={c}>{c.split('.').slice(-2).join('.')}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Refresh */}
+                <button
+                  onClick={fetchLogs}
+                  disabled={logsLoading}
+                  className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${logsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                <input
+                  type="text"
+                  placeholder="Search log messages…"
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchLogs()}
+                  className="field w-full pl-9 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Log entries */}
+            <div className="glass-card overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {logsLoading ? 'Loading…' : `${logsTotal} entries matched`}
+                </span>
+                <span className="text-[10px] text-muted-foreground/50">newest first</span>
+              </div>
+
+              {logsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Terminal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No log entries in this window</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">Logs appear when WARNING+ events occur</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {logs.map((entry) => (
+                    <div
+                      key={entry._id}
+                      className="group cursor-pointer px-5 py-3 hover:bg-white/[0.02] transition-colors"
+                      onClick={() => setExpandedLog(expandedLog === entry._id ? null : entry._id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Level badge */}
+                        <span className={`mt-0.5 flex-shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider ${LOG_LEVEL_STYLE[entry.level] ?? LOG_LEVEL_STYLE.INFO}`}>
+                          {entry.level}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          {/* Main message */}
+                          <p className="text-sm text-foreground/85 leading-snug truncate group-hover:whitespace-normal group-hover:truncate-none">
+                            {entry.message}
+                          </p>
+                          {/* Meta row */}
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            <span className="font-mono text-[10px] text-muted-foreground/60">
+                              {new Date(entry.timestamp).toLocaleString()}
+                            </span>
+                            <span className="font-mono text-[10px] text-primary/60">
+                              {entry.logger.split('.').slice(-2).join('.')}
+                            </span>
+                            <span className="font-mono text-[10px] text-muted-foreground/40">
+                              {entry.module}.{entry.func}:{entry.line}
+                            </span>
+                          </div>
+                        </div>
+
+                        {entry.exc_text && (
+                          <span className="flex-shrink-0 rounded bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 text-[9px] text-red-400">
+                            traceback
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Expanded: traceback */}
+                      {expandedLog === entry._id && entry.exc_text && (
+                        <pre className="mt-3 rounded-lg bg-black/40 border border-white/[0.06] p-3 font-mono text-[10px] text-red-300/80 leading-relaxed overflow-x-auto whitespace-pre-wrap">
+                          {entry.exc_text}
+                        </pre>
                       )}
                     </div>
-                    <span className="flex-shrink-0 font-mono text-[10px] text-muted-foreground/50 whitespace-nowrap">
-                      {formatDate(ev.timestamp)}
-                    </span>
-                  </div>
-                )
-              })}
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

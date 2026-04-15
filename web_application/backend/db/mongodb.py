@@ -74,6 +74,10 @@ def teams_col() -> Any:
     return get_db()["teams"]
 
 
+def system_logs_col() -> Any:
+    return get_db()["system_logs"]
+
+
 def cfpb_col() -> Any:
     """Read-only access to the existing CFPB complaints collection."""
     return get_db()[settings.cfpb_collection]
@@ -130,6 +134,18 @@ async def _ensure_indexes() -> None:
     await db["pipeline_stages"].create_indexes([
         IndexModel([("complaint_id", ASCENDING)]),
         IndexModel([("created_at", DESCENDING)]),
+    ])
+
+    # system_logs — written by MongoLogHandler; TTL auto-expires after 30 days
+    await db["system_logs"].create_indexes([
+        IndexModel([("timestamp", DESCENDING)]),
+        IndexModel([("level_no", ASCENDING)]),
+        IndexModel([("logger", ASCENDING)]),
+        IndexModel(
+            [("timestamp", ASCENDING)],
+            name="system_logs_ttl",
+            expireAfterSeconds=30 * 24 * 3600,  # 30-day TTL
+        ),
     ])
 
     logger.info("MongoDB indexes ensured")

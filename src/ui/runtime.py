@@ -575,7 +575,7 @@ def run_complaint(
         stages=stages,
         budget=budget_telemetry,
         audit_events=audit_events,
-        final_response=response_draft.render_text(),
+        final_response=response_draft.render_external_response(),
         final_explanation=final_explanation_bullets,
         run_status="completed",
     )

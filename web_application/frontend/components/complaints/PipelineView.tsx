@@ -53,7 +53,6 @@ export default function PipelineView({ stages, status }: Props) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Progress arc */}
           <svg className="h-8 w-8 -rotate-90" viewBox="0 0 32 32">
             <circle cx="16" cy="16" r="12" stroke="rgba(255,255,255,0.06)" strokeWidth="3" fill="none" />
             <circle
@@ -79,11 +78,9 @@ export default function PipelineView({ stages, status }: Props) {
 
       {/* ── Node track ───────────────────────────────────────── */}
       <div className="relative px-5 py-5">
-        {/* Vertical track */}
         <div className="pipeline-track-bg" />
         <div className="pipeline-track-fill" style={{ height: trackPct }} />
 
-        {/* Nodes */}
         <div className="space-y-0">
           {NODE_ORDER.map((node, idx) => {
             const stage      = stageMap[node]
@@ -94,7 +91,7 @@ export default function PipelineView({ stages, status }: Props) {
             return (
               <div key={node} className={cn('relative flex items-start gap-4', !isLast && 'pb-5')}>
 
-                {/* ── Node indicator ── */}
+                {/* Node indicator */}
                 <div className="relative z-10 flex-shrink-0 mt-0.5">
                   {nodeStatus === 'completed' && (
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/40 animate-scale-in">
@@ -126,16 +123,16 @@ export default function PipelineView({ stages, status }: Props) {
                   )}
                 </div>
 
-                {/* ── Node content ── */}
+                {/* Node content */}
                 <div className="flex-1 min-w-0 pt-0.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className={cn(
                         'text-sm font-medium transition-colors',
-                        nodeStatus === 'completed'  && 'text-foreground',
-                        nodeStatus === 'running'    && 'text-indigo-300',
-                        nodeStatus === 'interrupted'&& 'text-amber-300',
-                        nodeStatus === 'failed'     && 'text-red-400',
+                        nodeStatus === 'completed'   && 'text-foreground',
+                        nodeStatus === 'running'     && 'text-indigo-300',
+                        nodeStatus === 'interrupted' && 'text-amber-300',
+                        nodeStatus === 'failed'      && 'text-red-400',
                         (nodeStatus === 'pending' || !stage) && 'text-muted-foreground/50',
                       )}>
                         {meta?.label ?? node}
@@ -145,7 +142,6 @@ export default function PipelineView({ stages, status }: Props) {
                       )}
                     </div>
 
-                    {/* Latency badge */}
                     {(stage?.latency_ms ?? 0) > 0 && nodeStatus === 'completed' && (
                       <span className="flex-shrink-0 font-mono text-[10px] text-muted-foreground/60 bg-white/[0.04] px-1.5 py-0.5 rounded mt-0.5">
                         {stage!.latency_ms}ms
@@ -153,26 +149,22 @@ export default function PipelineView({ stages, status }: Props) {
                     )}
                   </div>
 
-                  {/* Running status */}
                   {nodeStatus === 'running' && (
                     <p className="mt-1 text-[11px] text-indigo-400/80 animate-pulse">
                       {(stage?.output as any)?.message ?? `Running ${meta?.desc?.toLowerCase()}…`}
                     </p>
                   )}
 
-                  {/* Interrupted */}
                   {nodeStatus === 'interrupted' && (
                     <p className="mt-1 text-[11px] text-amber-400/80 font-medium">
                       Human review required — awaiting decision
                     </p>
                   )}
 
-                  {/* Completed output preview */}
                   {nodeStatus === 'completed' && stage?.output && (
                     <NodeOutputPreview node={node} output={stage.output} />
                   )}
 
-                  {/* Token count */}
                   {(stage?.tokens_used ?? 0) > 0 && nodeStatus === 'completed' && (
                     <p className="mt-1 font-mono text-[10px] text-muted-foreground/40">
                       {stage!.tokens_used} tokens

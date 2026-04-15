@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..auth.dependencies import AdminUser
-from ..db.mongodb import audit_logs_col, complaints_col, teams_col, users_col
+from ..db.mongodb import audit_logs_col, complaints_col, system_logs_col, teams_col, users_col
 from ..models.audit_log import AuditAction
 from ..models.team import TeamDocument, TeamPublic
 from ..models.user import UserDocument, UserPublic, UserRole
@@ -408,3 +408,77 @@ async def assign_user_to_team(
         role=u.role, team_id=u.team_id, team_name=u.team_name,
         is_active=u.is_active, last_login_at=u.last_login_at, created_at=u.created_at,
     )
+
+
+# ── System log viewer ─────────────────────────────────────────────────────────
+
+_LEVEL_MAP = {
+    "DEBUG":    10,
+    "INFO":     20,
+    "WARNING":  30,
+    "ERROR":    40,
+    "CRITICAL": 50,
+}
+
+
+@router.get("/logs")
+async def system_log_viewer(
+    current_user: AdminUser,
+    min_level: str = "WARNING",
+    component: Optional[str] = None,
+    search: Optional[str] = None,
+    since_hours: int = 24,
+    limit: int = 200,
+    skip: int = 0,
+) -> Dict[str, Any]:
+    """Return structured application logs with optional filters."""
+    since = datetime.now(tz=timezone.utc) - timedelta(hours=max(1, min(since_hours, 24 * 30)))
+    min_level_no = _LEVEL_MAP.get(min_level.upper(), 30)
+
+    query: Dict[str, Any] = {
+        "timestamp": {"$gte": since},
+        "level_no": {"$gte": min_level_no},
+    }
+    if component:
+        query["logger"] = {"$regex": component, "$options": "i"}
+    if search:
+        query["message"] = {"$regex": search, "$options": "i"}
+
+    col = system_logs_col()
+    total = await col.count_documents(query)
+
+    cursor = col.find(query).sort("timestamp", -1).skip(skip).limit(min(limit, 500))
+    logs: List[Dict[str, Any]] = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        if isinstance(doc.get("timestamp"), datetime):
+            doc["timestamp"] = doc["timestamp"].isoformat()
+        logs.append(doc)
+
+    # Summary counts for the queried window (all levels)
+    summary_pipeline = [
+        {"$match": {"timestamp": {"$gte": since}}},
+        {"$group": {"_id": "$level", "count": {"$sum": 1}}},
+    ]
+    by_level: Dict[str, int] = {}
+    async for doc in col.aggregate(summary_pipeline):
+        by_level[doc["_id"]] = doc["count"]
+
+    # Distinct component names for filter dropdown
+    component_pipeline = [
+        {"$match": {"timestamp": {"$gte": since}}},
+        {"$group": {"_id": "$logger"}},
+        {"$sort": {"_id": 1}},
+        {"$limit": 50},
+    ]
+    components: List[str] = []
+    async for doc in col.aggregate(component_pipeline):
+        if doc["_id"]:
+            components.append(doc["_id"])
+
+    return {
+        "logs": logs,
+        "total": total,
+        "by_level": by_level,
+        "components": components,
+    }

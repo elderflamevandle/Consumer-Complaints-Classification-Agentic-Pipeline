@@ -27,6 +27,7 @@ from slowapi.util import get_remote_address
 
 from .auth.router import router as auth_router
 from .config import settings
+from .db.log_handler import MongoLogHandler
 from .db.mongodb import connect_db, close_db
 from .db.redis_client import connect_redis, close_redis
 from .middleware.csrf import CSRFMiddleware
@@ -41,6 +42,14 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# ── MongoDB structured log handler (WARNING+) ─────────────────────────────────
+_mongo_log_handler = MongoLogHandler(
+    mongo_url=settings.mongodb_url,
+    db_name=settings.mongodb_db_name,
+    level=logging.WARNING,
+)
+logging.getLogger().addHandler(_mongo_log_handler)
 
 # ── Rate limiter (slowapi) ────────────────────────────────────────────────────
 

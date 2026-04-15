@@ -87,6 +87,7 @@ def _hf_response(scores: list[float]) -> MagicMock:
 
 # ---------------------------------------------------------------------------
 # 1. _rerank_with_hf unit tests
+# _rerank_with_hf returns (candidates, scores) — unpack both in every test.
 # ---------------------------------------------------------------------------
 
 class TestRerankWithHF:
@@ -98,9 +99,10 @@ class TestRerankWithHF:
         hf_scores = [0.60, 0.95, 0.40]
 
         with patch("src.tools.vector_search.requests.post", return_value=_hf_response(hf_scores)):
-            result = _rerank_with_hf("query", candidates, "fake-token")
+            result, scores = _rerank_with_hf("query", candidates, "fake-token")
 
         assert [c.id for c in result] == ["B", "A", "C"]
+        assert scores == sorted(scores, reverse=True)
 
     def test_accepts_bare_float_scores(self) -> None:
         """HF API can return bare floats instead of label-score dicts."""
@@ -109,44 +111,48 @@ class TestRerankWithHF:
         mock_resp.json.return_value = [0.3, 0.95]
 
         with patch("src.tools.vector_search.requests.post", return_value=mock_resp):
-            result = _rerank_with_hf("query", candidates, "tok")
+            result, scores = _rerank_with_hf("query", candidates, "tok")
 
         assert result[0].id == "Y"
         assert result[1].id == "X"
+        assert scores[0] > scores[1]
 
     def test_fallback_on_network_error(self) -> None:
-        """ConnectionError must silently return original candidate order."""
+        """ConnectionError must return original order with empty scores list."""
         candidates = [_case("A", score=0.9), _case("B", score=0.8)]
 
         with patch(
             "src.tools.vector_search.requests.post",
             side_effect=ConnectionError("timeout"),
         ):
-            result = _rerank_with_hf("query", candidates, "tok")
+            result, scores = _rerank_with_hf("query", candidates, "tok")
 
         assert [c.id for c in result] == ["A", "B"]
+        assert scores == []
 
     def test_fallback_on_http_error(self) -> None:
-        """Non-2xx HTTP response must fall back to original order."""
+        """Non-2xx HTTP response must fall back to original order with empty scores."""
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = Exception("401 Unauthorized")
         candidates = [_case("A"), _case("B")]
 
         with patch("src.tools.vector_search.requests.post", return_value=mock_resp):
-            result = _rerank_with_hf("query", candidates, "bad-token")
+            result, scores = _rerank_with_hf("query", candidates, "bad-token")
 
         assert [c.id for c in result] == ["A", "B"]
+        assert scores == []
 
     def test_fallback_on_mismatched_score_count(self) -> None:
-        """Score list shorter than candidates must trigger fallback."""
+        """Score list shorter than candidates must trigger fallback with empty scores."""
         candidates = [_case("A"), _case("B"), _case("C")]
         mock_resp = MagicMock()
         mock_resp.json.return_value = [[{"label": "1", "score": 0.9}]]  # only 1 item
 
         with patch("src.tools.vector_search.requests.post", return_value=mock_resp):
-            result = _rerank_with_hf("query", candidates, "tok")
+            result, scores = _rerank_with_hf("query", candidates, "tok")
 
         assert [c.id for c in result] == ["A", "B", "C"]
+        assert scores == []
 
     def test_sends_correct_url_and_auth_header(self) -> None:
         """API call must target the configured HF model URL with Bearer auth."""
@@ -176,14 +182,18 @@ class TestRerankWithHF:
             _rerank_with_hf("test query", candidates, "tok")
 
         sent_pairs = mock_post.call_args.kwargs["json"]["inputs"]
-        assert sent_pairs == [["test query", "first doc"], ["test query", "second doc"]]
+        assert sent_pairs == [
+            {"text": "test query", "text_pair": "first doc"},
+            {"text": "test query", "text_pair": "second doc"},
+        ]
 
     def test_empty_candidates_returns_empty(self) -> None:
-        """Zero candidates must return an empty list without calling the API."""
+        """Zero candidates must return ([], []) without calling the API."""
         with patch("src.tools.vector_search.requests.post") as mock_post:
-            result = _rerank_with_hf("q", [], "tok")
+            result, scores = _rerank_with_hf("q", [], "tok")
 
         assert result == []
+        assert scores == []
         mock_post.assert_not_called()
 
 
@@ -259,7 +269,8 @@ class TestRetrieveSimilarCases:
             patch("chromadb.PersistentClient", return_value=client),
             patch(
                 "src.tools.vector_search._rerank_with_hf",
-                side_effect=lambda q, candidates, token, **kw: candidates,
+                # must return (candidates, scores) tuple now
+                side_effect=lambda q, candidates, token, **kw: (candidates, [0.9] * len(candidates)),
             ) as mock_rerank,
             patch.dict(os.environ, {"HF_TOKEN": "my-token"}),
         ):

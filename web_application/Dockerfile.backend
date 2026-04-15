@@ -30,8 +30,14 @@ COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 # Copy the canonical pipeline source (single source of truth — no more drift)
 COPY src/ ./src/
 
+# Copy root-level config file required by src/tools/vector_search.py
+COPY config.yaml ./config.yaml
+
 # Copy the MCP policy server (needed by the remediator node at runtime)
 COPY mcp_server/ ./mcp_server/
+
+# Copy the legal knowledge MCP module (imported by src/tools/mcp_policy_client.py)
+COPY legal_knowledge_mcp/ ./legal_knowledge_mcp/
 
 # Copy the web application backend
 COPY web_application/backend/ ./backend/
@@ -45,7 +51,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-RUN chown -R appuser:appuser /app
+# Create logs directory and grant write access to appuser.
+# The volume mount (./logs:/app/logs) will overlay this at runtime,
+# but we create it here so cold starts without a mount still work.
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000

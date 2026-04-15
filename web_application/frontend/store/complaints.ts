@@ -11,7 +11,13 @@ interface ComplaintsState {
   total: number
   isLoading: boolean
   listError: string | null
-  fetchComplaints: (params?: { status_filter?: string; limit?: number; skip?: number }) => Promise<void>
+  fetchComplaints: (params?: {
+    status_filter?: string
+    severity_filter?: string
+    team_filter?: string
+    limit?: number
+    skip?: number
+  }) => Promise<void>
 
   // Active (detail view)
   active: Complaint | null
