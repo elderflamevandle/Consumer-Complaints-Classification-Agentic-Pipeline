@@ -73,7 +73,7 @@ export default function ComplaintDetailPage() {
     rd && typeof rd === 'object' && 'external' in rd ? rd as ResponseDraftData : null
   const ext            = structured?.external
   const externalAsText = ext
-    ? `Acknowledgment:\n${ext.acknowledgment}\n\nFindings:\n${ext.findings}\n\nTimeline:\n${ext.timeline}`
+    ? `${ext.acknowledgment}\n\n${ext.findings}\n\n${ext.timeline}`
     : (typeof rd === 'string' ? rd : '')
 
   return (
@@ -159,6 +159,7 @@ export default function ComplaintDetailPage() {
                   ) : structured ? (
                     <ResponseSection
                       label="Customer Response"
+                      showHeadings={false}
                       fields={[
                         { heading: 'Acknowledgment', text: structured.external.acknowledgment },
                         { heading: 'Findings',        text: structured.external.findings },
@@ -168,7 +169,9 @@ export default function ComplaintDetailPage() {
                   ) : (
                     <ResponseSection
                       label="Customer Response"
-                      fields={[{ heading: 'Response', text: typeof rd === 'string' ? rd : JSON.stringify(rd, null, 2) }]}
+                      showHeadings={false}
+                      fields={parseResponseText(typeof rd === 'string' ? rd : JSON.stringify(rd, null, 2))
+                        .map((text, i) => ({ heading: String(i), text }))}
                     />
                   )}
                 </div>
@@ -379,20 +382,8 @@ export default function ComplaintDetailPage() {
 
             {/* Internal Analysis — always expanded in sidebar for admin/analyst */}
             {isAnalystOrAdmin && (
-              <div className="glass-card overflow-hidden animate-fade-up delay-200">
-                <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
-                    <Shield className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <h2 className="text-sm font-semibold text-foreground">Internal Analysis</h2>
-                  <span className="ml-auto text-[10px] text-muted-foreground/60">analyst / admin only</span>
-                </div>
-                <div className="px-5 py-4 space-y-5">
-
-                  {/* Pipeline stages */}
-                  <PipelineView stages={stages} status={complaint.status} />
-
-                </div>
+              <div className="animate-fade-up delay-200">
+                <PipelineView stages={stages} status={complaint.status} />
               </div>
             )}
 
@@ -402,6 +393,16 @@ export default function ComplaintDetailPage() {
       </main>
     </div>
   )
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function parseResponseText(text: string): string[] {
+  const parts = text
+    .split(/(?:Acknowledgm?ent|Findings|Timeline)\s*:\s*/i)
+    .map(s => s.trim())
+    .filter(Boolean)
+  return parts.length > 1 ? parts : [text]
 }
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
@@ -473,9 +474,11 @@ function PolicyRow({ label, value }: { label: string; value: string }) {
 function ResponseSection({
   label,
   fields,
+  showHeadings = true,
 }: {
   label: string
   fields: { heading: string; text: string }[]
+  showHeadings?: boolean
 }) {
   return (
     <div>
@@ -483,9 +486,11 @@ function ResponseSection({
       <div className="space-y-4">
         {fields.map(({ heading, text }) => (
           <div key={heading}>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              {heading}
-            </p>
+            {showHeadings && (
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {heading}
+              </p>
+            )}
             <p className="text-sm text-foreground/85 leading-relaxed">{text}</p>
           </div>
         ))}
