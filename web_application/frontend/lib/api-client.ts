@@ -67,6 +67,15 @@ async function doRefresh(): Promise<string | null> {
   }
 }
 
+/**
+ * Exported so auth store can proactively refresh on page load before
+ * calling /me — avoids the noisy 401 in DevTools and race conditions.
+ */
+export async function tryRefresh(): Promise<string | null> {
+  if (!_refreshPromise) _refreshPromise = doRefresh().finally(() => { _refreshPromise = null })
+  return _refreshPromise
+}
+
 // ── Axios instance ────────────────────────────────────────────────────────────
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,

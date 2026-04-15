@@ -2,14 +2,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, ArrowUpRight } from 'lucide-react'
+import { FileText, Plus, ArrowUpRight, X } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/auth'
 import { useComplaintsStore } from '@/store/complaints'
-import { formatDate, statusColor, severityColor } from '@/lib/utils'
+import { formatDate, statusColor, severityColor, cn } from '@/lib/utils'
 
-/* ── Status filter options ───────────────────────────────────────────────── */
+/* ── Filter options ─────────────────────────────────────────────────────── */
 const STATUS_OPTIONS = [
   { label: 'All',             value: '' },
   { label: 'Pending',         value: 'pending' },
@@ -20,13 +20,49 @@ const STATUS_OPTIONS = [
   { label: 'Failed',          value: 'failed' },
 ]
 
+const SEVERITY_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+
+const SEVERITY_CHIP: Record<string, string> = {
+  LOW:      'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  MEDIUM:   'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  HIGH:     'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  CRITICAL: 'bg-red-500/10 text-red-400 border-red-500/20',
+}
+
+const TEAM_OPTIONS = [
+  { slug: 'checking-savings-account', name: 'Checking & Savings' },
+  { slug: 'credit-card',              name: 'Credit Card' },
+  { slug: 'credit-reporting',         name: 'Credit Reporting' },
+  { slug: 'debt-collection',          name: 'Debt Collection' },
+  { slug: 'money-transfer',           name: 'Money Transfer' },
+  { slug: 'mortgage',                 name: 'Mortgage' },
+  { slug: 'vehicle-loan-lease',       name: 'Vehicle Loan & Lease' },
+]
+
 export default function ComplaintsPage() {
   const router = useRouter()
-  const { isAuthenticated, loadUser } = useAuthStore()
+  const { isAuthenticated, loadUser, user } = useAuthStore()
   const { complaints, total, isLoading, fetchComplaints } = useComplaintsStore()
-  const [statusFilter, setStatusFilter] = useState('')
-  const [page, setPage] = useState(0)
+
+  // Filters
+  const [statusFilter, setStatusFilter]       = useState('')
+  const [severities, setSeverities]           = useState<string[]>([])
+  const [teams, setTeams]                     = useState<string[]>([])
+  const [page, setPage]                       = useState(0)
   const PAGE_SIZE = 20
+
+  const isAdmin = user?.role === 'admin'
+  const hasAdvFilters = severities.length > 0 || teams.length > 0
+
+  const toggleSev = (v: string) => {
+    setSeverities((p) => p.includes(v) ? p.filter((x) => x !== v) : [...p, v])
+    setPage(0)
+  }
+  const toggleTeam = (v: string) => {
+    setTeams((p) => p.includes(v) ? p.filter((x) => x !== v) : [...p, v])
+    setPage(0)
+  }
+  const clearAll = () => { setSeverities([]); setTeams([]); setPage(0) }
 
   useEffect(() => {
     if (!isAuthenticated)
@@ -34,9 +70,15 @@ export default function ComplaintsPage() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated)
-      fetchComplaints({ status_filter: statusFilter || undefined, limit: PAGE_SIZE, skip: page * PAGE_SIZE })
-  }, [isAuthenticated, statusFilter, page])
+    if (!isAuthenticated) return
+    fetchComplaints({
+      status_filter:   statusFilter || undefined,
+      severity_filter: severities.length ? severities.join(',') : undefined,
+      team_filter:     teams.length ? teams.join(',') : undefined,
+      limit: PAGE_SIZE,
+      skip: page * PAGE_SIZE,
+    })
+  }, [isAuthenticated, statusFilter, severities, teams, page])
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,14 +93,17 @@ export default function ComplaintsPage() {
               {total.toLocaleString()} total complaints in queue
             </p>
           </div>
-          <Link href="/complaints/new" className="btn-primary animate-fade-up">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:block">New</span>
-          </Link>
+          {/* Only non-admin users can submit new complaints */}
+          {!isAdmin && (
+            <Link href="/complaints/new" className="btn-primary animate-fade-up">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:block">New</span>
+            </Link>
+          )}
         </div>
 
         {/* ── Status filter tabs ───────────────────────────────── */}
-        <div className="mb-5 flex flex-wrap gap-1.5 animate-fade-up delay-75">
+        <div className="mb-4 flex flex-wrap gap-1.5 animate-fade-up delay-75">
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -72,6 +117,64 @@ export default function ComplaintsPage() {
               {opt.label}
             </button>
           ))}
+        </div>
+
+        {/* ── Advanced filters ─────────────────────────────────── */}
+        <div className="mb-5 space-y-2.5 animate-fade-up delay-100">
+          {/* Severity */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-16 flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Severity
+            </span>
+            {SEVERITY_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => toggleSev(s)}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-[11px] font-semibold transition-all',
+                  severities.includes(s)
+                    ? SEVERITY_CHIP[s]
+                    : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground/60 hover:border-white/[0.15] hover:text-muted-foreground',
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
+          {/* Team */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-16 flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Team
+            </span>
+            {TEAM_OPTIONS.map((t) => (
+              <button
+                key={t.slug}
+                onClick={() => toggleTeam(t.slug)}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-[11px] font-semibold transition-all',
+                  teams.includes(t.slug)
+                    ? 'border-violet-500/40 bg-violet-500/15 text-violet-300'
+                    : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground/60 hover:border-white/[0.15] hover:text-muted-foreground',
+                )}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Clear bar */}
+          {hasAdvFilters && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>{severities.length + teams.length} filter{severities.length + teams.length > 1 ? 's' : ''} active</span>
+              <button
+                onClick={clearAll}
+                className="flex items-center gap-1 rounded-full border border-white/[0.08] px-2 py-0.5 hover:text-foreground transition-colors"
+              >
+                <X className="h-2.5 w-2.5" /> Clear all
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Table ───────────────────────────────────────────── */}
@@ -93,9 +196,11 @@ export default function ComplaintsPage() {
               </div>
               <p className="text-sm font-medium text-foreground/60">No complaints found</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {statusFilter ? `No complaints with status "${statusFilter}"` : 'Submit your first complaint to get started'}
+                {hasAdvFilters || statusFilter
+                  ? 'Try removing some filters'
+                  : 'Submit your first complaint to get started'}
               </p>
-              {!statusFilter && (
+              {!isAdmin && !statusFilter && !hasAdvFilters && (
                 <Link href="/complaints/new" className="btn-primary mt-5 py-2 px-5 text-xs">
                   Submit complaint
                 </Link>
@@ -103,9 +208,9 @@ export default function ComplaintsPage() {
             </div>
           ) : (
             <>
-              {/* ── Table header ── */}
-              <div className="hidden border-b border-white/[0.06] px-5 py-3 sm:grid sm:grid-cols-[1fr_160px_100px_110px_140px_100px_32px] gap-4">
-                {['Complaint', 'Product', 'Severity', 'Status', 'Team', 'Created', ''].map((h) => (
+              {/* ── Table header — Complaint | Severity | Status | Team | Created ── */}
+              <div className="hidden border-b border-white/[0.06] px-5 py-3 sm:grid sm:grid-cols-[1fr_100px_110px_180px_100px_32px] gap-4">
+                {['Complaint', 'Severity', 'Status', 'Team', 'Created', ''].map((h) => (
                   <span key={h} className="section-label">{h}</span>
                 ))}
               </div>
@@ -117,7 +222,7 @@ export default function ComplaintsPage() {
                     key={c.id}
                     onClick={() => router.push(`/complaints/${c.id}`)}
                     className="group grid cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.03]
-                               grid-cols-1 sm:grid-cols-[1fr_160px_100px_110px_140px_100px_32px]"
+                               grid-cols-1 sm:grid-cols-[1fr_100px_110px_180px_100px_32px]"
                   >
                     {/* Complaint text + ID */}
                     <div className="min-w-0">
@@ -129,11 +234,6 @@ export default function ComplaintsPage() {
                         {c.id.slice(0, 12)}
                       </p>
                     </div>
-
-                    {/* Product */}
-                    <span className="hidden text-xs text-muted-foreground sm:block truncate">
-                      {c.classification?.product_type.replace(/_/g, ' ') ?? '—'}
-                    </span>
 
                     {/* Severity */}
                     <div className="hidden sm:block">
@@ -149,7 +249,7 @@ export default function ComplaintsPage() {
                       <Badge variant={statusColor(c.status) as any}>{c.status}</Badge>
                     </div>
 
-                    {/* Team */}
+                    {/* Team (replaces Product) */}
                     <span className="hidden text-xs text-muted-foreground sm:block truncate">
                       {c.assigned_team ?? '—'}
                     </span>

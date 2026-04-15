@@ -90,7 +90,7 @@ _PRODUCT_TEAM_MAP: dict[str, str] = {
 }
 
 _TEAM_DISPLAY: dict[str, str] = {
-    "checking-savings-account": "Checking & Savings Account",
+    "checking-savings-account": "Checking and Savings Account",
     "credit-card":              "Credit Card",
     "credit-reporting":         "Credit Reporting",
     "debt-collection":          "Debt Collection",
