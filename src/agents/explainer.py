@@ -35,6 +35,8 @@ class ExplainerAgent:
         self._audit_logger = audit_logger
         self.last_model: str | None = None
         self.used_fallback = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
     def summarize_chain(
         self,
@@ -56,9 +58,12 @@ class ExplainerAgent:
             audit_verdict=audit_verdict,
         )
         self.used_fallback = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
         for attempt in range(self.repair_retries + 1):
             try:
+                self.last_llm_attempts += 1
                 response = self._client.complete(
                     prompt=prompt,
                     agent_name='explainer',
@@ -69,6 +74,7 @@ class ExplainerAgent:
                 break
 
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             parsed = self._parse_or_none(response.text)
             if parsed is not None:
                 normalized = self._normalize_result(parsed)
@@ -196,10 +202,12 @@ class ExplainerAgent:
             ExplanationBullet(
                 stage='response',
                 summary=(
-                    f'Final response states: {final_response.resolution_statement} '
-                    f'It preserves the four-block customer format.'
+                    f'Writer generated draft mapping {len(final_response.internal.action_steps)} '
+                    'remediation steps to policy outcomes. '
+                    f'Final response states: {final_response.internal.resolution_summary} '
+                    f'(SLA: {final_response.external.timeline})'
                 ),
-                citations=list(final_response.policy_citation_labels),
+                citations=[remediation.action_plan[0].policy_reference] if remediation.action_plan else [],
             ),
             ExplanationBullet(
                 stage='audit',

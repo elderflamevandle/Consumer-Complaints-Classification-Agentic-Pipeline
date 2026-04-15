@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AmbiguityFlag(StrEnum):
@@ -19,6 +19,11 @@ class EvidenceCitation(BaseModel):
     product: str
     issue: str
     date: str
+
+    @field_validator('id', mode='before')
+    @classmethod
+    def coerce_id_to_str(cls, v: object) -> str:
+        return str(v)
 
 
 class RootCauseEvidence(BaseModel):

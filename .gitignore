@@ -1,5 +1,6 @@
 .env
 .venv/
+.claude/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
@@ -20,3 +21,10 @@ plan2.md
 tests/data_exploration.ipynb
 
 tests/outputs
+
+F:\Agentic_Hackathon\mcp_policy_lab\.env
+F:\Agentic_Hackathon\legal_knowledge_mcp\.env
+
+F:\Agentic_Hackathon\nonexistent_chroma_dir_xyz
+
+logs/*.log

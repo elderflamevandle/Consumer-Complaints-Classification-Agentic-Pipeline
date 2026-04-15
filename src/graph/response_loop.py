@@ -96,7 +96,7 @@ def _record_cycle(
     history = list(state.message_history)
     history.extend(
         [
-            f'writer:{draft.resolution_statement}',
+            f'writer:{draft.internal.resolution_summary}',
             f'auditor:{audit.critique_summary}',
         ]
     )

@@ -8,7 +8,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from src.agents.prompts import build_writer_prompt, build_writer_repair_prompt, get_policy_labels
+from src.agents.prompts import (
+    UNCLEAR_FINDINGS_TEXT,
+    build_writer_prompt,
+    build_writer_repair_prompt,
+    get_policy_labels,
+)
 from src.agents.remediator import RemediationResult
 from src.llm.client import GroqLLMClient
 from src.schemas.classification import ClassificationResult
@@ -44,6 +49,8 @@ class WriterAgent:
         self.last_model: str | None = None
         self.used_fallback = False
         self.guardrail_triggered = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
     def compose_response(
         self,
@@ -65,16 +72,20 @@ class WriterAgent:
         )
         self.used_fallback = False
         self.guardrail_triggered = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
         raw_output = ''
         for attempt in range(self.repair_retries + 1):
+            self.last_llm_attempts += 1
             response = self._client.complete(
                 prompt=prompt,
                 agent_name='writer',
                 critical=True,
-                max_tokens=520,
+                max_tokens=768,
             )
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             raw_output = response.text
             parsed = self._parse_or_none(raw_output)
             if parsed is not None:
@@ -163,8 +174,18 @@ class WriterAgent:
         if candidate is None:
             return None
         try:
-            return ResponseDraft.model_validate_json(candidate)
-        except (ValidationError, json.JSONDecodeError):
+            data = json.loads(candidate)
+        except json.JSONDecodeError:
+            return None
+        # Coerce action_steps from string to list if the LLM returned a single string
+        internal = data.get('internal')
+        if isinstance(internal, dict):
+            steps = internal.get('action_steps')
+            if isinstance(steps, str):
+                internal['action_steps'] = [s.strip() for s in steps.split('.') if s.strip()]
+        try:
+            return ResponseDraft.model_validate(data)
+        except ValidationError:
             return None
 
     def _apply_guardrails(
@@ -177,26 +198,33 @@ class WriterAgent:
         sanitized = False
         updated = draft.model_dump()
 
-        text_fields = (
-            'resolution_statement',
-            'acknowledgment',
-            'findings',
-            'timeline_next_steps',
-        )
-        for field_name in text_fields:
-            original = str(updated[field_name])
+        # Sanitize internal text fields
+        for field_name in ('resolution_summary',):
+            original = str(updated['internal'][field_name])
             cleaned = _sanitize_text(original)
             if cleaned != original:
                 sanitized = True
-                updated[field_name] = cleaned
+                updated['internal'][field_name] = cleaned
 
         sanitized_steps: list[str] = []
-        for item in list(updated['action_steps']):
+        for item in list(updated['internal']['action_steps']):
             cleaned = _sanitize_text(item)
             if cleaned != item:
                 sanitized = True
             sanitized_steps.append(cleaned)
-        updated['action_steps'] = sanitized_steps
+        updated['internal']['action_steps'] = sanitized_steps
+
+        # Sanitize external text fields
+        for field_name in ('acknowledgment', 'findings', 'timeline'):
+            original = str(updated['external'][field_name])
+            if field_name == 'findings' and 'Insufficient retrieved evidence' in original:
+                cleaned = UNCLEAR_FINDINGS_TEXT
+                sanitized = True
+            else:
+                cleaned = _sanitize_text(original)
+                if cleaned != original:
+                    sanitized = True
+            updated['external'][field_name] = cleaned
 
         labels = list(updated.get('policy_citation_labels') or [])
         if not labels:
@@ -230,28 +258,35 @@ class WriterAgent:
         sla_window = str(
             remediation.policy_citations.get('sla_window', 'the required review window')
         )
-        findings = (
-            f'Current findings point to {diagnosis.root_cause.rstrip(".")}. '
-            f'This response addresses your reported {issue_text} concern on the '
-            f'{product_text} account.'
-        )
+        
+        root_cause_text = diagnosis.root_cause
+        if 'Insufficient retrieved evidence' in root_cause_text:
+            root_cause_text = UNCLEAR_FINDINGS_TEXT
+
+        findings = f'Current findings point to {root_cause_text.rstrip(".")}.'
         if unresolved_issues:
             findings += f' This revision specifically addresses: {"; ".join(unresolved_issues)}.'
+            
         return ResponseDraft(
-            resolution_statement=(
-                f'We will review your {issue_text} concern using the applicable '
-                'complaint-resolution steps.'
-            ),
-            acknowledgment=(
-                'We understand the concern described in your complaint and appreciate '
-                'the chance to review it.'
-            ),
-            findings=findings,
-            action_steps=actions,
-            timeline_next_steps=(
-                f'We will follow up within {sla_window} with the next status update or '
-                'any additional information needed.'
-            ),
+            internal={
+                'resolution_summary': (
+                    f'The consumer reported a(n) {issue_text} regarding their '
+                    f'{product_text} account. Standard complaint-resolution steps '
+                    'will be applied.'
+                ),
+                'action_steps': actions,
+            },
+            external={
+                'acknowledgment': (
+                    'We understand the concern described in your complaint and appreciate '
+                    'the chance to review it.'
+                ),
+                'findings': findings,
+                'timeline': (
+                    f'We will follow up within {sla_window} with the next status update or '
+                    'any additional information needed.'
+                ),
+            },
             policy_citation_labels=get_policy_labels(remediation),
             critique_items_addressed=list(dict.fromkeys(unresolved_issues)),
         )
@@ -290,7 +325,7 @@ def _extract_json_object(text: str) -> str | None:
     if stripped.startswith('{') and stripped.endswith('}'):
         return stripped
 
-    fenced = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', stripped, flags=re.DOTALL)
+    fenced = re.search(r'```(?:json)?\s*(\{.*\})\s*```', stripped, flags=re.DOTALL)
     if fenced:
         return fenced.group(1)
 

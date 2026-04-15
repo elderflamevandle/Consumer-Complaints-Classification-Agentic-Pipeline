@@ -30,7 +30,7 @@ class RemediationResult(BaseModel):
     status: str
     route: str
     action_plan: list[RemediationStep] = Field(default_factory=list)
-    policy_citations: dict[str, str | list[str]] = Field(default_factory=dict)
+    policy_citations: dict[str, Any] = Field(default_factory=dict)
 
 
 class _ModelPlan(BaseModel):
@@ -53,6 +53,9 @@ class RemediatorAgent:
         self._audit_logger = audit_logger
         self.call_order: list[str] = []
         self.last_model: str | None = None
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
+        self.used_fallback = False
 
     def propose_action(
         self,
@@ -64,10 +67,14 @@ class RemediatorAgent:
         thread_id: str | None = None,
     ) -> RemediationResult:
         self.call_order = []
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
+        self.used_fallback = False
         self.call_order.append('mcp')
         policy_result = self._mcp.get_sla_requirements(
             issue_type=classification.issue_type.value,
             state_code=state_code,
+            product_type=classification.product_type.value,
         )
         if not policy_result.available:
             result = RemediationResult(
@@ -88,6 +95,7 @@ class RemediatorAgent:
         assert policy is not None
 
         self.call_order.append('llm')
+        self.last_llm_attempts = 1
         response = self._client.complete(
             prompt=self._build_prompt(
                 complaint_text=complaint_text,
@@ -100,9 +108,11 @@ class RemediatorAgent:
             max_tokens=420,
         )
         self.last_model = response.model
+        self.last_total_tokens = response.total_tokens
 
         model_actions = self._parse_actions_or_none(response.text)
         if model_actions is None:
+            self.used_fallback = True
             model_actions = list(policy.required_actions)
 
         steps: list[RemediationStep] = []
@@ -115,10 +125,12 @@ class RemediatorAgent:
                 )
             )
 
-        citations: dict[str, str | list[str]] = {
+        citations: dict[str, Any] = {
             'sla_window': policy.sla_window,
             'required_actions': list(policy.required_actions),
             'regulatory_basis': policy.regulatory_basis,
+            'product_type': policy.product_type,
+            'legal_citations': list(policy.legal_citations),
         }
         result = RemediationResult(
             status='ok',

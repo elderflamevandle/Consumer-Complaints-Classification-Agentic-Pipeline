@@ -63,7 +63,9 @@ class ClassifierAgent:
         """Run two-stage LLM classification and return merged ClassificationResult."""
         self.product_result = self._product_classifier.classify_product(payload)
         self.issue_result = self._issue_classifier.classify_issue(
-            payload, self.product_result.product
+            payload,
+            self.product_result.product,
+            product_reasoning=self.product_result.reasoning,
         )
         self.last_llm_attempts = (
             self._product_classifier.last_llm_attempts

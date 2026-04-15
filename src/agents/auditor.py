@@ -59,6 +59,8 @@ class AuditorAgent:
         self._audit_logger = audit_logger
         self.last_model: str | None = None
         self.used_fallback = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
     def review_response(
         self,
@@ -69,9 +71,12 @@ class AuditorAgent:
     ) -> ResponseAuditResult:
         prompt = self._build_prompt(draft=draft, remediation=remediation)
         self.used_fallback = False
+        self.last_total_tokens = 0
+        self.last_llm_attempts = 0
 
         for attempt in range(self.repair_retries + 1):
             try:
+                self.last_llm_attempts += 1
                 response = self._client.complete(
                     prompt=prompt,
                     agent_name='auditor',
@@ -82,6 +87,7 @@ class AuditorAgent:
                 break
 
             self.last_model = response.model
+            self.last_total_tokens += response.total_tokens
             parsed = self._parse_or_none(response.text)
             if parsed is not None:
                 normalized = self._merge_with_heuristics(
@@ -98,7 +104,7 @@ class AuditorAgent:
                     thread_id=thread_id,
                     model=response.model,
                     decision=decision,
-                    scrubbed_text=draft.render_text(),
+                    scrubbed_text=f'{draft.render_internal_view()}\n\n{draft.render_external_response()}',
                 )
                 return normalized
             if attempt < self.repair_retries:
@@ -110,7 +116,7 @@ class AuditorAgent:
             thread_id=thread_id,
             model='auditor-fallback',
             decision='audit_pass' if fallback.verdict == AuditVerdict.PASS else 'audit_fail',
-            scrubbed_text=draft.render_text(),
+            scrubbed_text=f'{draft.render_internal_view()}\n\n{draft.render_external_response()}',
         )
         return fallback
 
@@ -157,16 +163,15 @@ class AuditorAgent:
         remediation: RemediationResult,
     ) -> ResponseAuditResult:
         reason_codes: list[AuditReasonCode] = []
-        rendered = draft.render_text()
+        rendered = f'{draft.render_internal_view()}\n\n{draft.render_external_response()}'
         lowered = rendered.lower()
 
-        if not all(
-            [
-                draft.acknowledgment.strip(),
-                draft.findings.strip(),
-                draft.action_steps,
-                draft.timeline_next_steps.strip(),
-            ]
+        if (
+            len(draft.external.acknowledgment.split()) < 4
+            or len(draft.external.findings.split()) < 4
+            or len(draft.internal.action_steps) == 0
+            or len(draft.external.timeline.split()) < 4
+            or len(draft.internal.resolution_summary.split()) < 4
         ):
             reason_codes.append(AuditReasonCode.STRUCTURE_MISSING)
 
@@ -175,7 +180,7 @@ class AuditorAgent:
             reason_codes.append(AuditReasonCode.MISSING_POLICY_CITATION)
 
         if (
-            len(draft.resolution_statement.split()) < 4
+            len(draft.internal.resolution_summary.split()) < 4
             or lowered.startswith('acknowledgment:\npending')
         ):
             reason_codes.append(AuditReasonCode.UNCLEAR_RESOLUTION)
