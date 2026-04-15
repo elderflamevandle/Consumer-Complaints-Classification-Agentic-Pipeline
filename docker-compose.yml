@@ -59,7 +59,7 @@ services:
       mongodb:
         condition: service_healthy
     env_file:
-      - ./web_application/backend/.env
+      - ./.env
     environment:
       - MONGODB_URL=mongodb://mongodb:27017
     volumes:
@@ -77,8 +77,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./.env                          # root .env — GROQ_API_KEY, HF_TOKEN, etc.
-      - ./web_application/backend/.env  # web-specific — overrides root where needed
+      - ./.env
     environment:
       # Override MongoDB/Redis to use the Docker services, not Atlas/localhost.
       # Remove MONGODB_URL here if you want to use your Atlas cluster from .env.
