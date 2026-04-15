@@ -4,17 +4,17 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, CheckCircle2, AlertCircle, Clock, ChevronDown, ChevronUp,
-  FileText, Shield, BarChart3, Loader2, Cpu,
+  FileText, Shield, Loader2, Cpu, Pencil, X, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/layout/Navbar'
 import PipelineView from '@/components/complaints/PipelineView'
 import ReviewPanel from '@/components/complaints/ReviewPanel'
-import AuditTable from '@/components/complaints/AuditTable'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/auth'
 import { useComplaintDetail } from '@/hooks/useComplaint'
-import { formatDate, statusColor, severityColor, riskColor } from '@/lib/utils'
+import { complaintsApi } from '@/lib/api-client'
+import { formatDate, statusColor, severityColor } from '@/lib/utils'
 
 export default function ComplaintDetailPage() {
   const { id }   = useParams<{ id: string }>()
@@ -22,6 +22,9 @@ export default function ComplaintDetailPage() {
   const { isAuthenticated, loadUser, user } = useAuthStore()
   const { complaint, stages, isLoading, error } = useComplaintDetail(id)
   const [showInternal, setShowInternal] = useState(false)
+  const [editingResponse, setEditingResponse] = useState(false)
+  const [responseDraft, setResponseDraft] = useState('')
+  const [savingResponse, setSavingResponse] = useState(false)
 
   const isAnalystOrAdmin = user?.role === 'admin' || user?.role === 'analyst'
 
@@ -174,16 +177,60 @@ export default function ComplaintDetailPage() {
                 <FileText className="h-3.5 w-3.5 text-primary" />
               </div>
               <h2 className="text-sm font-semibold text-foreground">Response Letter</h2>
-              {complaint.audit_verdict === 'PASS' && (
-                <span className="ml-auto flex items-center gap-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+              {complaint.audit_verdict === 'PASS' && !editingResponse && (
+                <span className="ml-1 flex items-center gap-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                   <CheckCircle2 className="h-2.5 w-2.5" /> Compliance reviewed
                 </span>
               )}
+              {isAnalystOrAdmin && !editingResponse && (
+                <button
+                  onClick={() => { setResponseDraft(complaint.response_draft ?? ''); setEditingResponse(true) }}
+                  className="ml-auto flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-white/[0.15] transition-all"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+              {editingResponse && (
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      setSavingResponse(true)
+                      try {
+                        await complaintsApi.updateResponse(id, responseDraft)
+                        setEditingResponse(false)
+                        window.location.reload()
+                      } finally {
+                        setSavingResponse(false)
+                      }
+                    }}
+                    disabled={savingResponse}
+                    className="flex items-center gap-1 rounded-lg bg-primary/20 border border-primary/30 px-2.5 py-1 text-xs text-primary hover:bg-primary/30 transition-all disabled:opacity-50"
+                  >
+                    {savingResponse ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingResponse(false)}
+                    className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    <X className="h-3 w-3" /> Cancel
+                  </button>
+                </div>
+              )}
             </div>
             <div className="px-5 py-5">
-              <pre className="whitespace-pre-wrap font-sans text-sm text-foreground/85 leading-relaxed">
-                {complaint.response_draft}
-              </pre>
+              {editingResponse ? (
+                <textarea
+                  value={responseDraft}
+                  onChange={(e) => setResponseDraft(e.target.value)}
+                  rows={16}
+                  className="field w-full resize-y font-mono text-xs leading-relaxed"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap font-sans text-sm text-foreground/85 leading-relaxed">
+                  {complaint.response_draft}
+                </pre>
+              )}
             </div>
           </div>
         )}
@@ -192,7 +239,10 @@ export default function ComplaintDetailPage() {
         {complaint.scrubbed_text && (
           <div className="mb-5 glass-card overflow-hidden animate-fade-up delay-225">
             <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4">
-              <h2 className="text-sm font-semibold text-foreground">Your Complaint</h2>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Complaint Details</h2>
+                <p className="font-mono text-[10px] text-muted-foreground mt-0.5">ID: {id}</p>
+              </div>
               <span className="ml-auto text-[10px] text-muted-foreground">PII automatically redacted</span>
             </div>
             <div className="px-5 py-4">
@@ -210,7 +260,7 @@ export default function ComplaintDetailPage() {
               <h2 className="text-sm font-semibold text-foreground">Case Summary</h2>
             </div>
             <div className="grid grid-cols-2 gap-px bg-white/[0.04] sm:grid-cols-3">
-              <SummaryTile label="Category"
+              <SummaryTile label="Product Type"
                 value={complaint.classification.product_type.replace(/_/g, ' ')} />
               <SummaryTile label="Issue Type">
                 <span className="text-sm font-medium text-foreground/90">
@@ -263,57 +313,6 @@ export default function ComplaintDetailPage() {
                 {/* Pipeline */}
                 <PipelineView stages={stages} status={complaint.status} />
 
-                {/* Classification detail */}
-                <InternalSection title="Classification Detail" icon={<BarChart3 className="h-3.5 w-3.5" />}>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    <Tile label="Compliance Risk">
-                      <Badge variant={riskColor(complaint.classification?.compliance_risk ?? '') as any}>
-                        {complaint.classification?.compliance_risk}
-                      </Badge>
-                    </Tile>
-                    <Tile label="Confidence"
-                      value={`${Math.round((complaint.classification?.confidence ?? 0) * 100)}%`} />
-                    <Tile label="Audit Verdict">
-                      <span className={cn(
-                        'text-sm font-bold font-mono',
-                        complaint.audit_verdict === 'PASS' ? 'text-emerald-400' : 'text-red-400'
-                      )}>
-                        {complaint.audit_verdict === 'PASS' ? '✓ PASS' : complaint.audit_verdict ? '✗ FAIL' : '—'}
-                      </span>
-                    </Tile>
-                  </div>
-                </InternalSection>
-
-                {/* Root cause */}
-                {complaint.root_cause && (
-                  <InternalSection title="Root Cause Analysis">
-                    <p className="mb-4 text-sm text-foreground/75 leading-relaxed">{complaint.root_cause}</p>
-                    {complaint.root_cause_evidence?.length > 0 && (
-                      <>
-                        <p className="section-label mb-3">
-                          {complaint.root_cause_evidence.length} similar historical cases
-                        </p>
-                        <div className="space-y-2">
-                          {complaint.root_cause_evidence.slice(0, 3).map((ev) => (
-                            <div key={ev.rank} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5">
-                              <div className="mb-1.5 flex items-center gap-2">
-                                <span className="font-mono text-[11px] font-bold text-primary/70">#{ev.rank}</span>
-                                <span className="text-[11px] text-muted-foreground">
-                                  {ev.citation.product} / {ev.citation.issue}
-                                </span>
-                                <span className="ml-auto font-mono text-[10px] text-muted-foreground/50">
-                                  score {ev.score.toFixed(3)}
-                                </span>
-                              </div>
-                              <p className="text-xs text-foreground/60 leading-relaxed">{ev.summary}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </InternalSection>
-                )}
-
                 {/* Remediation */}
                 {complaint.remediation_steps?.length > 0 && (
                   <InternalSection title="Remediation Plan">
@@ -341,35 +340,6 @@ export default function ComplaintDetailPage() {
                   </InternalSection>
                 )}
 
-                {/* Regulatory explainer */}
-                {complaint.explanation && (
-                  <InternalSection title="Regulatory Audit Trail">
-                    {typeof complaint.explanation === 'string' ? (
-                      <pre className="output-block">{complaint.explanation}</pre>
-                    ) : (complaint.explanation as any)?.bullets ? (
-                      <ul className="space-y-3">
-                        {((complaint.explanation as any).bullets as any[]).map((b: any, i: number) => (
-                          <li key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5">
-                            <div className="mb-1 flex items-center gap-2">
-                              <span className="font-mono text-[10px] font-bold text-primary/70 uppercase">{b.stage}</span>
-                              {b.citations?.length > 0 && (
-                                <span className="ml-auto font-mono text-[10px] text-muted-foreground/50">
-                                  {b.citations.join(', ')}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-foreground/70 leading-relaxed">{b.summary}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <pre className="output-block">{JSON.stringify(complaint.explanation, null, 2)}</pre>
-                    )}
-                  </InternalSection>
-                )}
-
-                {/* Audit log */}
-                <AuditTable complaintId={id} />
               </div>
             )}
           </div>

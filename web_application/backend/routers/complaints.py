@@ -52,6 +52,17 @@ class AssignRequest(BaseModel):
     assigned_team: str = Field(min_length=1, max_length=200)
 
 
+class UpdateResponseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_draft: str = Field(min_length=1, max_length=50_000)
+
+    @field_validator("response_draft")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        return bleach.clean(v, tags=[], strip=True).strip()
+
+
 def _json_safe(obj: Any) -> Any:
     """Recursively convert datetime objects to ISO strings for JSON serialization."""
     if isinstance(obj, datetime):
@@ -107,10 +118,21 @@ async def submit_complaint(
     }
 
 
+def _split(val: Optional[str]) -> Optional[List[str]]:
+    """'LOW,HIGH' → ['LOW', 'HIGH']; None or '' → None."""
+    if not val:
+        return None
+    parts = [v.strip() for v in val.split(",") if v.strip()]
+    return parts if parts else None
+
+
 @router.get("")
 async def list_complaints(
     current_user: CurrentUser,
-    status_filter: Optional[str] = None,
+    status_filter: Optional[str] = None,    # comma-separated e.g. "complete,failed"
+    product_filter: Optional[str] = None,   # comma-separated
+    severity_filter: Optional[str] = None,  # comma-separated
+    team_filter: Optional[str] = None,      # comma-separated team IDs
     limit: int = 50,
     skip: int = 0,
 ) -> Dict[str, Any]:
@@ -119,6 +141,7 @@ async def list_complaints(
       - Admin    → no filter, sees all complaints
       - Analyst  → sees complaints in their team OR submitted by themselves
       - Viewer / Customer → sees only complaints they submitted
+    Filters accept comma-separated values for multi-select.
     """
     uid: Optional[str] = None
     tid: Optional[str] = None
@@ -127,19 +150,29 @@ async def list_complaints(
         pass  # no filter
     elif current_user.role == UserRole.ANALYST:
         uid = current_user.id
-        tid = current_user.team_id  # May be None if analyst is unassigned
+        tid = current_user.team_id
     else:
         uid = current_user.id  # Viewer: own only
+
+    statuses  = _split(status_filter)
+    products  = _split(product_filter)
+    severities = _split(severity_filter)
+    team_ids  = _split(team_filter)
 
     complaints = await complaint_service.list_complaints(
         user_id=uid,
         team_id=tid,
-        status=status_filter,
+        statuses=statuses,
+        product_types=products,
+        severities=severities,
+        assigned_team_ids=team_ids,
         limit=min(limit, 100),
         skip=skip,
     )
     total = await complaint_service.count_complaints(
-        user_id=uid, team_id=tid, status=status_filter
+        user_id=uid, team_id=tid,
+        statuses=statuses, product_types=products,
+        severities=severities, assigned_team_ids=team_ids,
     )
 
     return {
@@ -227,6 +260,32 @@ async def assign_complaint(
     )
     complaint = await complaint_service.get_complaint(complaint_id)
     return _serialize_complaint(complaint)
+
+
+@router.patch("/{complaint_id}/response")
+async def update_response_draft(
+    complaint_id: str,
+    body: UpdateResponseRequest,
+    request: Request,
+    current_user: AnalystUser,
+) -> Dict[str, Any]:
+    complaint = await complaint_service.get_complaint(complaint_id)
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    await complaint_service.update_complaint_fields(
+        complaint_id, {"response_draft": body.response_draft}
+    )
+    await audit_service.log_event(
+        AuditAction.COMPLAINT_RESPONSE_UPDATED,
+        user_id=current_user.id,
+        entity_type="complaint",
+        entity_id=complaint_id,
+        details={"updated_by": current_user.email},
+        ip_address=request.client.host if request.client else None,
+    )
+    updated = await complaint_service.get_complaint(complaint_id)
+    return _serialize_complaint(updated)
 
 
 @router.get("/{complaint_id}/audit")

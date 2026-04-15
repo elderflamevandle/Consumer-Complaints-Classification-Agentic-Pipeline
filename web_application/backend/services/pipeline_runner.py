@@ -14,6 +14,71 @@ from src.graph.pipeline import get_graph
 
 logger = logging.getLogger(__name__)
 
+# ── Team routing ──────────────────────────────────────────────────────────────
+# Maps keywords found in issue_type (lowercased) → team slug.
+# First matching rule wins (most-specific first).
+_ISSUE_TEAM_RULES: list[tuple[str, str]] = [
+    ("identity theft", "identity-protection"),
+    ("fraud alert", "fraud-security"),
+    ("security freeze", "fraud-security"),
+    ("fraud or scam", "fraud-security"),
+    ("fraud", "fraud-security"),
+    ("scam", "fraud-security"),
+    ("unauthorized transaction", "fraud-security"),
+    ("credit report", "credit-bureau"),
+    ("credit score", "credit-bureau"),
+    ("credit monitoring", "credit-bureau"),
+    ("customer service", "cx-escalations"),
+    ("payment process", "payments-ops"),
+    ("making payment", "payments-ops"),
+    ("money", "payments-ops"),
+    ("transfer", "payments-ops"),
+    ("billing", "billing-resolution"),
+    ("charged", "billing-resolution"),
+    ("purchase shown", "billing-resolution"),
+    ("lender", "billing-resolution"),
+]
+
+# Falls back to product-type mapping when no issue-type rule matches.
+_PRODUCT_TEAM_MAP: dict[str, str] = {
+    "CREDIT_REPORTING": "credit-bureau",
+    "MONEY_TRANSFER": "payments-ops",
+    "DEBT_COLLECTION": "billing-resolution",
+    "CHECKING_SAVINGS_ACCOUNT": "billing-resolution",
+    "CREDIT_CARD": "billing-resolution",
+    "MORTGAGE": "billing-resolution",
+    "VEHICLE_LOAN_LEASE": "billing-resolution",
+}
+
+_TEAM_DISPLAY: dict[str, str] = {
+    "fraud-security":    "Fraud & Security",
+    "identity-protection": "Identity Protection",
+    "credit-bureau":     "Credit Bureau",
+    "cx-escalations":    "Customer Experience",
+    "payments-ops":      "Payments Operations",
+    "billing-resolution": "Billing Resolution",
+    "general-resolution": "General Complaint Resolution",
+}
+
+
+def _resolve_team(classification: Any) -> tuple[str, str]:
+    """Return (slug, display_name) from a ClassificationResult or dict."""
+    issue_lower = ""
+    product_upper = ""
+    if hasattr(classification, "issue_type"):
+        issue_lower = str(classification.issue_type).lower()
+        product_upper = str(getattr(classification, "product_type", "")).upper()
+    elif isinstance(classification, dict):
+        issue_lower = str(classification.get("issue_type", "")).lower()
+        product_upper = str(classification.get("product_type", "")).upper()
+
+    for keyword, slug in _ISSUE_TEAM_RULES:
+        if keyword in issue_lower:
+            return slug, _TEAM_DISPLAY.get(slug, slug.replace("-", " ").title())
+
+    slug = _PRODUCT_TEAM_MAP.get(product_upper, "general-resolution")
+    return slug, _TEAM_DISPLAY.get(slug, slug.replace("-", " ").title())
+
 class PipelineUpdate:
     __slots__ = ("node", "event", "payload", "timestamp")
 
@@ -145,8 +210,14 @@ class PipelineRunner:
                         
                     payload["action_plan"] = actions
                     payload["policy_citations"] = citations
-                    payload["assigned_team"] = "General Complaint Resolution"
-                    payload["assigned_team_slug"] = "general-resolution"
+                    # Route to team based on classification already in accumulated state
+                    classification = self._result.get("classification")
+                    team_slug, team_display = _resolve_team(classification)
+                    payload["assigned_team"] = team_display
+                    payload["assigned_team_slug"] = team_slug
+                    # Persist routing in final_result so complaint_service can write it to DB
+                    self._result["assigned_team_slug"] = team_slug
+                    self._result["assigned_team"] = team_display
 
                 elif node_name == "response_writer":
                     mapped_name = "writer"

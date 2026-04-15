@@ -77,7 +77,10 @@ async def get_complaint(complaint_id: str) -> Optional[ComplaintDocument]:
 def _build_complaint_query(
     user_id: Optional[str] = None,
     team_id: Optional[str] = None,
-    status: Optional[str] = None,
+    statuses: Optional[List[str]] = None,
+    product_types: Optional[List[str]] = None,
+    severities: Optional[List[str]] = None,
+    assigned_team_ids: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Build a MongoDB query for complaint access control.
@@ -86,17 +89,29 @@ def _build_complaint_query(
       - Admin:   no user_id / team_id filter → sees everything
       - Analyst: user_id AND team_id provided → $or clause (own + team's)
       - Viewer:  user_id only → only their own submissions
+
+    All filter lists use $in when >1 value, equality when exactly 1.
     """
     query: Dict[str, Any] = {}
 
     if user_id and team_id:
-        # Analyst: own complaints OR team-assigned complaints
         query["$or"] = [{"user_id": user_id}, {"team_id": team_id}]
     elif user_id:
         query["user_id"] = user_id
 
-    if status:
-        query["status"] = status
+    def _in(vals: Optional[List[str]]) -> Optional[Any]:
+        if not vals:
+            return None
+        return vals[0] if len(vals) == 1 else {"$in": vals}
+
+    if statuses:
+        query["status"] = _in(statuses)
+    if product_types:
+        query["classification.product_type"] = _in(product_types)
+    if severities:
+        query["classification.severity"] = _in(severities)
+    if assigned_team_ids:
+        query["team_id"] = _in(assigned_team_ids)
 
     return query
 
@@ -105,11 +120,18 @@ async def list_complaints(
     *,
     user_id: Optional[str] = None,
     team_id: Optional[str] = None,
-    status: Optional[str] = None,
+    statuses: Optional[List[str]] = None,
+    product_types: Optional[List[str]] = None,
+    severities: Optional[List[str]] = None,
+    assigned_team_ids: Optional[List[str]] = None,
     limit: int = 50,
     skip: int = 0,
 ) -> List[ComplaintDocument]:
-    query = _build_complaint_query(user_id=user_id, team_id=team_id, status=status)
+    query = _build_complaint_query(
+        user_id=user_id, team_id=team_id,
+        statuses=statuses, product_types=product_types,
+        severities=severities, assigned_team_ids=assigned_team_ids,
+    )
     cursor = (
         complaints_col()
         .find(query)
@@ -127,9 +149,16 @@ async def count_complaints(
     *,
     user_id: Optional[str] = None,
     team_id: Optional[str] = None,
-    status: Optional[str] = None,
+    statuses: Optional[List[str]] = None,
+    product_types: Optional[List[str]] = None,
+    severities: Optional[List[str]] = None,
+    assigned_team_ids: Optional[List[str]] = None,
 ) -> int:
-    query = _build_complaint_query(user_id=user_id, team_id=team_id, status=status)
+    query = _build_complaint_query(
+        user_id=user_id, team_id=team_id,
+        statuses=statuses, product_types=product_types,
+        severities=severities, assigned_team_ids=assigned_team_ids,
+    )
     return await complaints_col().count_documents(query)
 
 
@@ -313,11 +342,18 @@ async def run_pipeline(
             if "review_required" in final:
                 update_fields["review_required"] = final["review_required"]
 
-            # Resolve team_id from slug if present
+            # Resolve team_id and assigned_team from slug if present
             if "assigned_team_slug" in final:
-                team_doc = await teams_col().find_one({"slug": final["assigned_team_slug"]})
+                slug = final["assigned_team_slug"]
+                # Set display name from slug as fallback
+                update_fields.setdefault(
+                    "assigned_team",
+                    final.get("assigned_team") or slug.replace("-", " ").title()
+                )
+                team_doc = await teams_col().find_one({"slug": slug})
                 if team_doc:
                     update_fields["team_id"] = team_doc["_id"]
+                    update_fields["assigned_team"] = team_doc["name"]
 
             # Pipeline state has no "status" key — infer from presence of explanation node.
             final_status = final.get("status") or (

@@ -20,9 +20,9 @@ COPY web_application/frontend/ .
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# NEXT_PUBLIC_API_URL is injected at runtime via the container environment;
-# during build we set a placeholder so Next.js doesn't complain.
-# The actual value (http://backend:8000) comes from docker-compose.
+# NEXT_PUBLIC_* vars are embedded into the browser JS bundle at build time.
+# Pass the browser-accessible API URL via --build-arg from docker-compose.
+# Default: http://localhost:8000 (works for local Docker on the same machine).
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 

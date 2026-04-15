@@ -1,21 +1,26 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # FinComplaint AI — Full-stack Docker Compose
 #
-# Starts every service in one command from the project root:
+# Start everything in one command from the project root:
 #   docker compose up --build
 #
 # Services:
-#   redis    — session cache / rate-limit store
-#   mongodb  — local document store (overrides MONGODB_URL from .env)
-#   backend  — FastAPI + LangGraph 8-node AI pipeline
-#   frontend — Next.js 14 web UI
+#   redis      — session cache / rate-limit store
+#   mongodb    — local document store
+#   mongo-seed — one-shot admin user seeder (runs once, then exits)
+#   backend    — FastAPI + LangGraph 8-node AI pipeline
+#   frontend   — Next.js 14 web UI
 #
 # Pre-requisites before first run:
-#   1. Copy web_application/backend/.env.example → web_application/backend/.env
-#      and fill in GROQ_API_KEY and SECRET_KEY.
+#   1. Ensure web_application/backend/.env is filled in (copy from .env.example).
 #   2. (Optional) seed ChromaDB for RAG:
-#      uv run python scripts/seed_vectordb.py
+#        uv run python scripts/seed_vectordb.py
 #      The seeded chroma_db/ is bind-mounted into the backend container.
+#
+# Admin credentials (first run only):
+#   Email:    admin@fincomplaint.ai
+#   Password: Admin1234!
+#   Override via SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD env vars.
 # ──────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -47,6 +52,23 @@ services:
       start_period: 20s
       retries: 5
 
+  # ── Admin seeder (runs once, then exits) ───────────────────────────────────
+  mongo-seed:
+    image: python:3.11-slim
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - ./web_application/backend/.env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+    volumes:
+      - ./scripts/seed_admin.py:/seed_admin.py:ro
+    command: >
+      sh -c "pip install motor bcrypt --quiet &&
+             python /seed_admin.py"
+    restart: "no"
+
   # ── FastAPI Backend + LangGraph AI Pipeline ────────────────────────────────
   backend:
     build:
@@ -58,14 +80,16 @@ services:
       - ./.env                          # root .env — GROQ_API_KEY, HF_TOKEN, etc.
       - ./web_application/backend/.env  # web-specific — overrides root where needed
     environment:
-      # These override .env values so the stack is self-contained locally.
-      # Remove MONGODB_URL here to use your Atlas cluster from .env instead.
+      # Override MongoDB/Redis to use the Docker services, not Atlas/localhost.
+      # Remove MONGODB_URL here if you want to use your Atlas cluster from .env.
       - MONGODB_URL=mongodb://mongodb:27017
       - REDIS_URL=redis://redis:6379/0
       - APP_ENV=production
-      # Pipeline data paths (relative to WORKDIR /app inside the container)
+      # Pipeline data paths inside the container
       - DATA_DIR=/app/data
       - CHROMA_DIR=/app/chroma_db
+      # MCP fallback — use mock regulatory data if external APIs are unavailable
+      - LEGAL_MCP_USE_MOCK_FALLBACK=${LEGAL_MCP_USE_MOCK_FALLBACK:-1}
     volumes:
       # Bind-mount local data so the pipeline reads CFPB parquet & ChromaDB index.
       # Run `uv run python scripts/seed_vectordb.py` first to populate chroma_db/.
@@ -76,13 +100,15 @@ services:
         condition: service_healthy
       mongodb:
         condition: service_healthy
+      mongo-seed:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request,sys; r=urllib.request.urlopen('http://localhost:8000/health',timeout=4); sys.exit(0 if r.status==200 else 1)"]
       interval: 15s
       timeout: 8s
-      start_period: 30s
+      start_period: 40s
       retries: 5
 
   # ── Next.js Frontend ───────────────────────────────────────────────────────
@@ -90,10 +116,14 @@ services:
     build:
       context: .
       dockerfile: web_application/Dockerfile.frontend
+      args:
+        # NEXT_PUBLIC_* vars are baked into the browser JS bundle at build time.
+        # Must be the URL the BROWSER uses — localhost, not the Docker service name.
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NODE_ENV=production
     depends_on:
       backend:
         condition: service_healthy
@@ -101,7 +131,7 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
       interval: 20s
-      timeout: 5s
+      timeout: 8s
       start_period: 30s
       retries: 3
 

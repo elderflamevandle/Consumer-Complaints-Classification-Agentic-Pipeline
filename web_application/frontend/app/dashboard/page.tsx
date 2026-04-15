@@ -107,10 +107,12 @@ export default function DashboardPage() {
               <p className="mt-1 text-sm text-muted-foreground">{user.team_name} &nbsp;·&nbsp; <span className="uppercase text-[10px] tracking-wider">{user.role}</span></p>
             )}
           </div>
-          <Link href="/complaints/new" className="btn-primary animate-fade-up flex-shrink-0">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:block">New Complaint</span>
-          </Link>
+          {user?.role !== 'admin' && (
+            <Link href="/complaints/new" className="btn-primary animate-fade-up flex-shrink-0">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:block">New Complaint</span>
+            </Link>
+          )}
         </div>
 
         {/* ── Stat cards ──────────────────────────────────────── */}
@@ -268,6 +270,9 @@ export default function DashboardPage() {
                     </p>
                     <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                       {c.id.slice(0, 12)} · {formatDate(c.created_at)}
+                      {c.classification?.product_type
+                        ? ` · ${c.classification.product_type.replace(/_/g, ' ')}`
+                        : ''}
                       {c.assigned_team ? ` · ${c.assigned_team}` : ''}
                     </p>
                   </div>

@@ -117,13 +117,21 @@ export const complaintsApi = {
   submit: (complaint_text: string, state_code = 'CA') =>
     api.post<{ id: string; status: string; websocket_url: string }>(
       '/api/complaints', { complaint_text, state_code }),
-  list: (params?: { status_filter?: string; limit?: number; skip?: number }) =>
-    api.get<PaginatedResponse<Complaint>>('/api/complaints', { params }),
+  list: (params?: {
+    status_filter?: string    // comma-separated e.g. "complete,failed"
+    product_filter?: string
+    severity_filter?: string
+    team_filter?: string
+    limit?: number
+    skip?: number
+  }) => api.get<PaginatedResponse<Complaint>>('/api/complaints', { params }),
   get: (id: string) => api.get<Complaint>(`/api/complaints/${id}`),
   review: (id: string, action: string, reviewer_notes?: string, edited_text?: string) =>
     api.post<Complaint>(`/api/complaints/${id}/review`, { action, reviewer_notes, edited_text }),
   assign: (id: string, assigned_team: string) =>
     api.post<Complaint>(`/api/complaints/${id}/assign`, { assigned_team }),
+  updateResponse: (id: string, response_draft: string) =>
+    api.patch<Complaint>(`/api/complaints/${id}/response`, { response_draft }),
   audit: (id: string) => api.get(`/api/complaints/${id}/audit`),
 }
 
