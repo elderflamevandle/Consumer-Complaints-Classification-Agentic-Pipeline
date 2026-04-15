@@ -304,26 +304,20 @@ async def run_pipeline(
                     update_fields["remediation_steps"] = [
                         (s.get("action", str(s)) if isinstance(s, dict) else str(s)) for s in plan
                     ]
-                    update_fields["policy_citations"] = rem.get("citations", [])
+                    update_fields["policy_citations"] = rem.get("policy_citations", {})
                     # Team assignment from remediation
                     assigned = rem.get("assigned_team") or rem.get("assigned_team_slug")
                     if assigned:
                         update_fields["assigned_team"] = assigned
 
-            # response_draft (ResponseDraft Pydantic model)
+            # response_draft (ResponseDraft Pydantic model) — stored as dict so
+            # the frontend can render internal vs external based on user role.
             if "response_draft" in final:
                 draft = final["response_draft"]
-                if hasattr(draft, "render_text"):
-                    update_fields["response_draft"] = draft.render_text()
-                elif hasattr(draft, "content"):
-                    update_fields["response_draft"] = draft.content
+                if hasattr(draft, "model_dump"):
+                    update_fields["response_draft"] = draft.model_dump()
                 elif isinstance(draft, dict):
-                    # Reconstruct from dict if it has ResponseDraft fields
-                    from src.schemas.response import ResponseDraft as RD
-                    try:
-                        update_fields["response_draft"] = RD.model_validate(draft).render_text()
-                    except Exception:
-                        update_fields["response_draft"] = draft.get("content", str(draft))
+                    update_fields["response_draft"] = draft
                 else:
                     update_fields["response_draft"] = str(draft)
 

@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Users, Layers, Plus, Pencil, X, Check, Loader2, AlertTriangle, FileText, BarChart3, ArrowUpRight } from 'lucide-react'
+import { Users, Layers, Plus, Pencil, X, Check, Loader2, AlertTriangle, FileText, BarChart3, ArrowUpRight, Terminal, Search, RefreshCw } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { useAuthStore } from '@/store/auth'
 import { adminApi, complaintsApi } from '@/lib/api-client'
@@ -11,7 +11,13 @@ import { formatDate, statusColor, severityColor } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Team, User, Complaint, DashboardStats } from '@/types'
 
-type Tab = 'users' | 'teams' | 'complaints' | 'reports'
+type Tab = 'users' | 'teams' | 'complaints' | 'reports' | 'logs'
+
+type LogEntry = {
+  _id: string; timestamp: string; level: string; level_no: number
+  logger: string; message: string; module: string; func: string
+  line: number; exc_text: string | null
+}
 
 const ISSUE_TYPES   = ['FRAUD','BILLING','IDENTITY_THEFT','PAYMENT','CREDIT_REPORTING','CUSTOMER_SERVICE']
 const PRODUCT_TYPES = ['CREDIT_CARD','MORTGAGE','LOAN','BANK_ACCOUNT','DEBT_COLLECTION','MONEY_TRANSFER']
@@ -40,11 +46,20 @@ const PRODUCT_OPTIONS = [
   'MORTGAGE', 'VEHICLE_LOAN_LEASE', 'MONEY_TRANSFER', 'DEBT_COLLECTION',
 ]
 
-const TAB_ICONS = {
+const TAB_ICONS: Record<Tab, React.ReactNode> = {
   users:      <Users className="h-4 w-4" />,
   teams:      <Layers className="h-4 w-4" />,
   complaints: <FileText className="h-4 w-4" />,
   reports:    <BarChart3 className="h-4 w-4" />,
+  logs:       <Terminal className="h-4 w-4" />,
+}
+
+const LOG_LEVEL_STYLE: Record<string, string> = {
+  DEBUG:    'bg-white/[0.06] text-muted-foreground border-white/[0.08]',
+  INFO:     'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  WARNING:  'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  ERROR:    'bg-red-500/10 text-red-400 border-red-500/20',
+  CRITICAL: 'bg-red-600/15 text-red-300 border-red-600/30',
 }
 
 export default function AdminPage() {
@@ -78,6 +93,18 @@ export default function AdminPage() {
   // Reports tab state
   const [stats, setStats]             = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+
+  // Logs tab state
+  const [logs, setLogs]               = useState<LogEntry[]>([])
+  const [logsTotal, setLogsTotal]     = useState(0)
+  const [logsByLevel, setLogsByLevel] = useState<Record<string, number>>({})
+  const [logComponents, setLogComponents] = useState<string[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logMinLevel, setLogMinLevel] = useState('WARNING')
+  const [logComponent, setLogComponent] = useState('')
+  const [logSearch, setLogSearch]     = useState('')
+  const [logHours, setLogHours]       = useState(24)
+  const [expandedLog, setExpandedLog] = useState<string | null>(null)
 
   // Team form state
   const [showTeamForm, setShowTeamForm]       = useState(false)
@@ -138,6 +165,29 @@ export default function AdminPage() {
       .catch(() => setPageError('Failed to load report data'))
       .finally(() => setStatsLoading(false))
   }, [isAuthenticated, user, activeTab])
+
+  // Logs tab — fetch when tab active or filters change
+  const fetchLogs = () => {
+    if (!isAuthenticated || user?.role !== 'admin') return
+    setLogsLoading(true)
+    adminApi.logs({
+      min_level: logMinLevel,
+      component: logComponent || undefined,
+      search: logSearch || undefined,
+      since_hours: logHours,
+      limit: 200,
+    }).then((res) => {
+      setLogs(res.data.logs)
+      setLogsTotal(res.data.total)
+      setLogsByLevel(res.data.by_level)
+      setLogComponents(res.data.components)
+    }).catch(() => setPageError('Failed to load logs'))
+    .finally(() => setLogsLoading(false))
+  }
+  useEffect(() => {
+    if (activeTab !== 'logs') return
+    fetchLogs()
+  }, [isAuthenticated, user, activeTab, logMinLevel, logComponent, logHours])
 
   const handleRoleChange = async (userId: string, role: string) => {
     if (!confirm(`Change role to "${role}"?`)) return
@@ -240,7 +290,7 @@ export default function AdminPage() {
 
         {/* ── Tabs ──────────────────────────────────────────── */}
         <div className="mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-card p-1 w-fit animate-fade-up delay-75">
-          {(['users', 'teams', 'complaints', 'reports'] as Tab[]).map((tab) => (
+          {(['users', 'teams', 'complaints', 'reports', 'logs'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -831,6 +881,173 @@ export default function AdminPage() {
             ) : (
               <div className="py-16 text-center text-sm text-muted-foreground">Failed to load report data</div>
             )}
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════
+            LOGS TAB
+            ════════════════════════════════════════════════════ */}
+        {activeTab === 'logs' && (
+          <div className="space-y-4 animate-fade-up delay-150">
+
+            {/* Summary bar */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Critical', key: 'CRITICAL', color: 'text-red-300', bg: 'bg-red-600/10 border-red-600/20' },
+                { label: 'Errors',   key: 'ERROR',    color: 'text-red-400',  bg: 'bg-red-500/10 border-red-500/20' },
+                { label: 'Warnings', key: 'WARNING',  color: 'text-amber-400',bg: 'bg-amber-500/10 border-amber-500/20' },
+                { label: 'Info',     key: 'INFO',     color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+              ].map(({ label, key, color, bg }) => (
+                <div key={key} className={`rounded-xl border p-4 ${bg}`}>
+                  <p className="text-xs text-muted-foreground mb-1">{label} (window)</p>
+                  <p className={`text-2xl font-bold font-mono ${color}`}>{logsByLevel[key] ?? 0}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Filter bar */}
+            <div className="glass-card px-5 py-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Min level */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Min level</span>
+                  <select
+                    value={logMinLevel}
+                    onChange={(e) => setLogMinLevel(e.target.value)}
+                    className="field h-8 py-0 text-xs pr-6"
+                  >
+                    {['DEBUG','INFO','WARNING','ERROR','CRITICAL'].map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Time window */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Window</span>
+                  <select
+                    value={logHours}
+                    onChange={(e) => setLogHours(Number(e.target.value))}
+                    className="field h-8 py-0 text-xs pr-6"
+                  >
+                    <option value={1}>Last 1h</option>
+                    <option value={6}>Last 6h</option>
+                    <option value={24}>Last 24h</option>
+                    <option value={168}>Last 7d</option>
+                    <option value={720}>Last 30d</option>
+                  </select>
+                </div>
+
+                {/* Component */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Component</span>
+                  <select
+                    value={logComponent}
+                    onChange={(e) => setLogComponent(e.target.value)}
+                    className="field h-8 py-0 text-xs pr-6 max-w-[180px]"
+                  >
+                    <option value="">All</option>
+                    {logComponents.map((c) => (
+                      <option key={c} value={c}>{c.split('.').slice(-2).join('.')}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Refresh */}
+                <button
+                  onClick={fetchLogs}
+                  disabled={logsLoading}
+                  className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${logsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                <input
+                  type="text"
+                  placeholder="Search log messages…"
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchLogs()}
+                  className="field w-full pl-9 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Log entries */}
+            <div className="glass-card overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {logsLoading ? 'Loading…' : `${logsTotal} entries matched`}
+                </span>
+                <span className="text-[10px] text-muted-foreground/50">newest first</span>
+              </div>
+
+              {logsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Terminal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No log entries in this window</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">Logs appear when WARNING+ events occur</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {logs.map((entry) => (
+                    <div
+                      key={entry._id}
+                      className="group cursor-pointer px-5 py-3 hover:bg-white/[0.02] transition-colors"
+                      onClick={() => setExpandedLog(expandedLog === entry._id ? null : entry._id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Level badge */}
+                        <span className={`mt-0.5 flex-shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider ${LOG_LEVEL_STYLE[entry.level] ?? LOG_LEVEL_STYLE.INFO}`}>
+                          {entry.level}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          {/* Main message */}
+                          <p className="text-sm text-foreground/85 leading-snug truncate group-hover:whitespace-normal group-hover:truncate-none">
+                            {entry.message}
+                          </p>
+                          {/* Meta row */}
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            <span className="font-mono text-[10px] text-muted-foreground/60">
+                              {new Date(entry.timestamp).toLocaleString()}
+                            </span>
+                            <span className="font-mono text-[10px] text-primary/60">
+                              {entry.logger.split('.').slice(-2).join('.')}
+                            </span>
+                            <span className="font-mono text-[10px] text-muted-foreground/40">
+                              {entry.module}.{entry.func}:{entry.line}
+                            </span>
+                          </div>
+                        </div>
+
+                        {entry.exc_text && (
+                          <span className="flex-shrink-0 rounded bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 text-[9px] text-red-400">
+                            traceback
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Expanded: traceback */}
+                      {expandedLog === entry._id && entry.exc_text && (
+                        <pre className="mt-3 rounded-lg bg-black/40 border border-white/[0.06] p-3 font-mono text-[10px] text-red-300/80 leading-relaxed overflow-x-auto whitespace-pre-wrap">
+                          {entry.exc_text}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

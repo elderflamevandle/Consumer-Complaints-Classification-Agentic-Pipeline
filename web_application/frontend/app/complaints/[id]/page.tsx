@@ -4,8 +4,9 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, CheckCircle2, AlertCircle, Clock, ChevronDown, ChevronUp,
-  FileText, Shield, Loader2, Cpu, Pencil, X, Check,
+  FileText, Shield, Loader2, Cpu, Pencil, X, Check, Lock,
 } from 'lucide-react'
+import type { ResponseDraftData } from '@/types'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/layout/Navbar'
 import PipelineView from '@/components/complaints/PipelineView'
@@ -170,70 +171,146 @@ export default function ComplaintDetailPage() {
         )}
 
         {/* ── Response letter ───────────────────────────────── */}
-        {complaint.response_draft && (
-          <div className="mb-5 glass-card overflow-hidden animate-fade-up delay-150">
-            <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
-                <FileText className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <h2 className="text-sm font-semibold text-foreground">Response Letter</h2>
-              {complaint.audit_verdict === 'PASS' && !editingResponse && (
-                <span className="ml-1 flex items-center gap-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                  <CheckCircle2 className="h-2.5 w-2.5" /> Compliance reviewed
-                </span>
-              )}
-              {isAnalystOrAdmin && !editingResponse && (
-                <button
-                  onClick={() => { setResponseDraft(complaint.response_draft ?? ''); setEditingResponse(true) }}
-                  className="ml-auto flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-white/[0.15] transition-all"
-                >
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-              )}
-              {editingResponse && (
-                <div className="ml-auto flex items-center gap-2">
-                  <button
-                    onClick={async () => {
-                      setSavingResponse(true)
-                      try {
-                        await complaintsApi.updateResponse(id, responseDraft)
-                        setEditingResponse(false)
-                        window.location.reload()
-                      } finally {
-                        setSavingResponse(false)
-                      }
-                    }}
-                    disabled={savingResponse}
-                    className="flex items-center gap-1 rounded-lg bg-primary/20 border border-primary/30 px-2.5 py-1 text-xs text-primary hover:bg-primary/30 transition-all disabled:opacity-50"
-                  >
-                    {savingResponse ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                    Save
-                  </button>
-                  <button
-                    onClick={() => setEditingResponse(false)}
-                    className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-all"
-                  >
-                    <X className="h-3 w-3" /> Cancel
-                  </button>
+        {complaint.response_draft && (() => {
+          // Parse structured vs plain-text response_draft
+          const rd = complaint.response_draft
+          const structured: ResponseDraftData | null =
+            rd && typeof rd === 'object' && 'external' in rd ? rd as ResponseDraftData : null
+          const ext = structured?.external
+
+          // External text used when editing (pre-fills textarea)
+          const externalAsText = ext
+            ? `Acknowledgment:\n${ext.acknowledgment}\n\nFindings:\n${ext.findings}\n\nTimeline:\n${ext.timeline}`
+            : (typeof rd === 'string' ? rd : '')
+
+          return (
+            <div className="mb-5 glass-card overflow-hidden animate-fade-up delay-150">
+              {/* Header */}
+              <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-4">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
                 </div>
-              )}
+                <h2 className="text-sm font-semibold text-foreground">Response Letter</h2>
+                {complaint.audit_verdict === 'PASS' && !editingResponse && (
+                  <span className="ml-1 flex items-center gap-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                    <CheckCircle2 className="h-2.5 w-2.5" /> Compliance reviewed
+                  </span>
+                )}
+                {isAnalystOrAdmin && !editingResponse && (
+                  <button
+                    onClick={() => { setResponseDraft(externalAsText); setEditingResponse(true) }}
+                    className="ml-auto flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-white/[0.15] transition-all"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+                )}
+                {editingResponse && (
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        setSavingResponse(true)
+                        try {
+                          await complaintsApi.updateResponse(id, responseDraft)
+                          setEditingResponse(false)
+                          window.location.reload()
+                        } finally {
+                          setSavingResponse(false)
+                        }
+                      }}
+                      disabled={savingResponse}
+                      className="flex items-center gap-1 rounded-lg bg-primary/20 border border-primary/30 px-2.5 py-1 text-xs text-primary hover:bg-primary/30 transition-all disabled:opacity-50"
+                    >
+                      {savingResponse ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingResponse(false)}
+                      className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-all"
+                    >
+                      <X className="h-3 w-3" /> Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="px-5 py-5 space-y-5">
+                {editingResponse ? (
+                  <textarea
+                    value={responseDraft}
+                    onChange={(e) => setResponseDraft(e.target.value)}
+                    rows={16}
+                    className="field w-full resize-y font-mono text-xs leading-relaxed"
+                  />
+                ) : structured ? (
+                  <>
+                    {/* External section — visible to everyone */}
+                    <ResponseSection
+                      label="Customer Response"
+                      fields={[
+                        { heading: 'Acknowledgment', text: structured.external.acknowledgment },
+                        { heading: 'Findings',        text: structured.external.findings },
+                        { heading: 'Timeline',        text: structured.external.timeline },
+                      ]}
+                    />
+
+                    {/* Internal section — admin / analyst only */}
+                    {isAnalystOrAdmin && (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] overflow-hidden">
+                        <div className="flex items-center gap-2 border-b border-amber-500/15 px-4 py-2.5">
+                          <Lock className="h-3 w-3 text-amber-400/70" />
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">
+                            Internal — not visible to customer
+                          </span>
+                        </div>
+                        <div className="px-4 py-4 space-y-4">
+                          <div>
+                            <p className="section-label mb-1.5">Resolution Summary</p>
+                            <p className="text-sm text-foreground/80 leading-relaxed">
+                              {structured.internal.resolution_summary}
+                            </p>
+                          </div>
+                          {structured.internal.action_steps.length > 0 && (
+                            <div>
+                              <p className="section-label mb-2">Action Steps</p>
+                              <ol className="space-y-2">
+                                {structured.internal.action_steps.map((step, i) => (
+                                  <li key={i} className="flex gap-2.5 text-sm">
+                                    <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/30 font-mono text-[9px] font-bold text-amber-400 mt-0.5">
+                                      {i + 1}
+                                    </span>
+                                    <span className="text-foreground/75 leading-relaxed">{step}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+                          {structured.policy_citation_labels.length > 0 && (
+                            <div>
+                              <p className="section-label mb-1.5">Policy Citations</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {structured.policy_citation_labels.map((label, i) => (
+                                  <span key={i} className="rounded-full bg-white/[0.06] border border-white/[0.08] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Fallback: plain string (manually edited) */
+                  <pre className="whitespace-pre-wrap font-sans text-sm text-foreground/85 leading-relaxed">
+                    {typeof rd === 'string' ? rd : JSON.stringify(rd, null, 2)}
+                  </pre>
+                )}
+              </div>
             </div>
-            <div className="px-5 py-5">
-              {editingResponse ? (
-                <textarea
-                  value={responseDraft}
-                  onChange={(e) => setResponseDraft(e.target.value)}
-                  rows={16}
-                  className="field w-full resize-y font-mono text-xs leading-relaxed"
-                />
-              ) : (
-                <pre className="whitespace-pre-wrap font-sans text-sm text-foreground/85 leading-relaxed">
-                  {complaint.response_draft}
-                </pre>
-              )}
-            </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* ── Complaint text ────────────────────────────────── */}
         {complaint.scrubbed_text && (
@@ -384,6 +461,30 @@ function Tile({ label, value, children }: { label: string; value?: string; child
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5">
       <p className="section-label mb-2">{label}</p>
       {children ?? <p className="text-sm font-medium text-foreground/90">{value}</p>}
+    </div>
+  )
+}
+
+function ResponseSection({
+  label,
+  fields,
+}: {
+  label: string
+  fields: { heading: string; text: string }[]
+}) {
+  return (
+    <div>
+      <p className="section-label mb-3">{label}</p>
+      <div className="space-y-4">
+        {fields.map(({ heading, text }) => (
+          <div key={heading}>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              {heading}
+            </p>
+            <p className="text-sm text-foreground/85 leading-relaxed">{text}</p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

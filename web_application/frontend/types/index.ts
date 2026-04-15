@@ -44,6 +44,26 @@ export interface RefreshResponse {
   expires_in: number
 }
 
+// ── Response Draft ────────────────────────────────────────────────────────────
+
+export interface InternalResponse {
+  resolution_summary: string
+  action_steps: string[]
+}
+
+export interface ExternalResponse {
+  acknowledgment: string
+  findings: string
+  timeline: string
+}
+
+export interface ResponseDraftData {
+  internal: InternalResponse
+  external: ExternalResponse
+  policy_citation_labels: string[]
+  critique_items_addressed: string[]
+}
+
 // ── Complaint ─────────────────────────────────────────────────────────────────
 
 export type ComplaintStatus =
@@ -91,7 +111,7 @@ export interface Complaint {
   root_cause_evidence: RootCauseEvidence[]
   remediation_steps: RemediationStep[]
   policy_citations: Record<string, unknown> | null
-  response_draft: string | null
+  response_draft: ResponseDraftData | string | null
   audit_verdict: string | null
   explanation: string | null
   review_required: boolean

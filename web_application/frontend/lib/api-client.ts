@@ -148,6 +148,23 @@ export const adminApi = {
     api.patch<User>(`/api/admin/users/${userId}/team`, { team_id: teamId }),
   systemAudit: (limit = 100, action_filter?: string) =>
     api.get('/api/admin/audit', { params: { limit, action_filter } }),
+  logs: (params?: {
+    min_level?: string
+    component?: string
+    search?: string
+    since_hours?: number
+    limit?: number
+    skip?: number
+  }) => api.get<{
+    logs: Array<{
+      _id: string; timestamp: string; level: string; level_no: number
+      logger: string; message: string; module: string; func: string
+      line: number; exc_text: string | null
+    }>
+    total: number
+    by_level: Record<string, number>
+    components: string[]
+  }>('/api/admin/logs', { params }),
   // Team CRUD
   listTeams: (includeInactive = false) =>
     api.get<{ items: Team[]; total: number }>('/api/admin/teams', {

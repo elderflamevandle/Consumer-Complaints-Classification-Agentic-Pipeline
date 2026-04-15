@@ -91,7 +91,7 @@ class ComplaintDocument(BaseModel):
     root_cause_evidence: List[Dict[str, Any]] = Field(default_factory=list)
     remediation_steps: List[Any] = Field(default_factory=list)
     policy_citations: Optional[Any] = None
-    response_draft: Optional[str] = None
+    response_draft: Optional[Any] = None   # dict (structured) or str (manually edited)
     audit_verdict: Optional[str] = None    # PASS | FAIL | ESCALATE
     explanation: Optional[Any] = None
 

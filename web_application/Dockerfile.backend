@@ -30,8 +30,14 @@ COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 # Copy the canonical pipeline source (single source of truth — no more drift)
 COPY src/ ./src/
 
+# Copy root-level config file required by src/tools/vector_search.py
+COPY config.yaml ./config.yaml
+
 # Copy the MCP policy server (needed by the remediator node at runtime)
 COPY mcp_server/ ./mcp_server/
+
+# Copy the legal knowledge MCP module (imported by src/tools/mcp_policy_client.py)
+COPY legal_knowledge_mcp/ ./legal_knowledge_mcp/
 
 # Copy the web application backend
 COPY web_application/backend/ ./backend/
