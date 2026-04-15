@@ -49,7 +49,13 @@
       "Bash(curl -s -X POST http://localhost:8000/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"flowtest2@example.com\",\"password\":\"Test1234!\"}')",
       "Bash(python -c \"import yaml; print\\('yaml ok'\\)\")",
       "Bash(uv run:*)",
-      "mcp__plugin_claude-mem_mcp-search__smart_outline"
+      "mcp__plugin_claude-mem_mcp-search__smart_outline",
+      "Bash(xargs grep:*)",
+      "Bash(grep -n \"sla_window\\\\|policy_citations\\\\|citations\\\\|sla_policy\\\\|SLAPolicy\" src/schemas/*.py src/agents/remediator.py)",
+      "Bash(curl -s http://localhost:8000/api/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"admin@fincomplaint.ai\",\"password\":\"Admin1234!\"}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('access_token','ERROR:'+str\\(d\\)\\)[:80]\\)\")",
+      "Bash(docker run *)",
+      "Bash(python -c ' *)"
     ]
   }
 }

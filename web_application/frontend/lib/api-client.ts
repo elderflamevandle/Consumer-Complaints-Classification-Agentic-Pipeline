@@ -67,6 +67,15 @@ async function doRefresh(): Promise<string | null> {
   }
 }
 
+/**
+ * Exported so auth store can proactively refresh on page load before
+ * calling /me — avoids the noisy 401 in DevTools and race conditions.
+ */
+export async function tryRefresh(): Promise<string | null> {
+  if (!_refreshPromise) _refreshPromise = doRefresh().finally(() => { _refreshPromise = null })
+  return _refreshPromise
+}
+
 // ── Axios instance ────────────────────────────────────────────────────────────
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -117,13 +126,21 @@ export const complaintsApi = {
   submit: (complaint_text: string, state_code = 'CA') =>
     api.post<{ id: string; status: string; websocket_url: string }>(
       '/api/complaints', { complaint_text, state_code }),
-  list: (params?: { status_filter?: string; limit?: number; skip?: number }) =>
-    api.get<PaginatedResponse<Complaint>>('/api/complaints', { params }),
+  list: (params?: {
+    status_filter?: string    // comma-separated e.g. "complete,failed"
+    product_filter?: string
+    severity_filter?: string
+    team_filter?: string
+    limit?: number
+    skip?: number
+  }) => api.get<PaginatedResponse<Complaint>>('/api/complaints', { params }),
   get: (id: string) => api.get<Complaint>(`/api/complaints/${id}`),
   review: (id: string, action: string, reviewer_notes?: string, edited_text?: string) =>
     api.post<Complaint>(`/api/complaints/${id}/review`, { action, reviewer_notes, edited_text }),
   assign: (id: string, assigned_team: string) =>
     api.post<Complaint>(`/api/complaints/${id}/assign`, { assigned_team }),
+  updateResponse: (id: string, response_draft: string) =>
+    api.patch<Complaint>(`/api/complaints/${id}/response`, { response_draft }),
   audit: (id: string) => api.get(`/api/complaints/${id}/audit`),
 }
 
@@ -140,6 +157,23 @@ export const adminApi = {
     api.patch<User>(`/api/admin/users/${userId}/team`, { team_id: teamId }),
   systemAudit: (limit = 100, action_filter?: string) =>
     api.get('/api/admin/audit', { params: { limit, action_filter } }),
+  logs: (params?: {
+    min_level?: string
+    component?: string
+    search?: string
+    since_hours?: number
+    limit?: number
+    skip?: number
+  }) => api.get<{
+    logs: Array<{
+      _id: string; timestamp: string; level: string; level_no: number
+      logger: string; message: string; module: string; func: string
+      line: number; exc_text: string | null
+    }>
+    total: number
+    by_level: Record<string, number>
+    components: string[]
+  }>('/api/admin/logs', { params }),
   // Team CRUD
   listTeams: (includeInactive = false) =>
     api.get<{ items: Team[]; total: number }>('/api/admin/teams', {
@@ -156,6 +190,8 @@ export const adminApi = {
 }
 
 export const teamsApi = {
+  list: () =>
+    api.get<{ items: { id: string; name: string; slug: string }[]; total: number }>('/api/teams'),
   myTeam: () => api.get<{ team: Team; members: User[] }>('/api/teams/me'),
   myComplaints: (params?: { status_filter?: string; limit?: number; skip?: number }) =>
     api.get<PaginatedResponse<Complaint>>('/api/teams/me/complaints', { params }),

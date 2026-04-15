@@ -3,7 +3,7 @@
  * Access token is kept in-memory via tokenStore (not persisted).
  */
 import { create } from 'zustand'
-import { authApi, tokenStore } from '@/lib/api-client'
+import { authApi, tokenStore, tryRefresh } from '@/lib/api-client'
 import type { User } from '@/types'
 
 interface AuthState {
@@ -57,6 +57,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   loadUser: async () => {
     set({ isLoading: true })
     try {
+      // If no in-memory token (page refresh / new tab), silently attempt
+      // a cookie-based refresh BEFORE calling /me.  This avoids a noisy
+      // 401 on /me and lets the interceptor focus on genuine auth failures.
+      if (!tokenStore.get()) {
+        const tok = await tryRefresh()
+        if (!tok) {
+          // No valid refresh cookie — user is genuinely unauthenticated.
+          set({ user: null, isAuthenticated: false, isLoading: false })
+          return
+        }
+      }
       const res = await authApi.me()
       set({ user: res.data, isAuthenticated: true, isLoading: false })
     } catch {

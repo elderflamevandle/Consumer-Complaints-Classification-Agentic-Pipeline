@@ -24,6 +24,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/teams", tags=["teams"])
 
 
+# ── All active teams (any authenticated user) ──────────────────────────────────
+
+@router.get("")
+async def list_all_teams(current_user: CurrentUser) -> Dict[str, Any]:
+    """Return all active teams — used for complaint filters and assignment dropdowns."""
+    cursor = teams_col().find({"is_active": True}).sort("name", 1)
+    teams = []
+    async for doc in cursor:
+        t = TeamDocument.from_mongo(doc)
+        teams.append({"id": t.id, "name": t.name, "slug": t.slug})
+    return {"items": teams, "total": len(teams)}
+
+
 # ── My team ────────────────────────────────────────────────────────────────────
 
 @router.get("/me")
