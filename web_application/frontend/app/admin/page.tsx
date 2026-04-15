@@ -23,12 +23,14 @@ const ISSUE_TYPES   = ['FRAUD','BILLING','IDENTITY_THEFT','PAYMENT','CREDIT_REPO
 const PRODUCT_TYPES = ['CREDIT_CARD','MORTGAGE','LOAN','BANK_ACCOUNT','DEBT_COLLECTION','MONEY_TRANSFER']
 
 const ROUTING_REF = [
-  { issue: 'FRAUD',           slug: 'fraud-security' },
-  { issue: 'BILLING',         slug: 'billing-resolution' },
-  { issue: 'IDENTITY_THEFT',  slug: 'identity-protection' },
-  { issue: 'PAYMENT',         slug: 'payments-ops' },
-  { issue: 'CREDIT_REPORTING',slug: 'credit-bureau' },
-  { issue: 'CUSTOMER_SERVICE',slug: 'cx-escalations' },
+  { issue: 'Fraud / Unauthorized Access', slug: 'fraud-security' },
+  { issue: 'Credit Report / Identity Theft', slug: 'credit-reporting' },
+  { issue: 'Debt Collection',             slug: 'debt-collection' },
+  { issue: 'Money Transfer / Prepaid',    slug: 'money-transfer' },
+  { issue: 'Credit Card',                 slug: 'credit-card' },
+  { issue: 'Checking / Savings Account',  slug: 'checking-savings-account' },
+  { issue: 'Mortgage',                    slug: 'mortgage' },
+  { issue: 'Vehicle Loan & Lease',        slug: 'vehicle-loan-lease' },
 ]
 
 function toSlug(name: string) {

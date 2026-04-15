@@ -6,6 +6,7 @@ import { FileText, Plus, ArrowUpRight, X } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/auth'
+import { teamsApi } from '@/lib/api-client'
 import { useComplaintsStore } from '@/store/complaints'
 import { formatDate, statusColor, severityColor, cn } from '@/lib/utils'
 
@@ -29,20 +30,13 @@ const SEVERITY_CHIP: Record<string, string> = {
   CRITICAL: 'bg-red-500/10 text-red-400 border-red-500/20',
 }
 
-const TEAM_OPTIONS = [
-  { slug: 'checking-savings-account', name: 'Checking & Savings' },
-  { slug: 'credit-card',              name: 'Credit Card' },
-  { slug: 'credit-reporting',         name: 'Credit Reporting' },
-  { slug: 'debt-collection',          name: 'Debt Collection' },
-  { slug: 'money-transfer',           name: 'Money Transfer' },
-  { slug: 'mortgage',                 name: 'Mortgage' },
-  { slug: 'vehicle-loan-lease',       name: 'Vehicle Loan & Lease' },
-]
-
 export default function ComplaintsPage() {
   const router = useRouter()
   const { isAuthenticated, loadUser, user } = useAuthStore()
   const { complaints, total, isLoading, fetchComplaints } = useComplaintsStore()
+
+  // Dynamic team options loaded from DB
+  const [teamOptions, setTeamOptions] = useState<{ id: string; name: string; slug: string }[]>([])
 
   // Filters
   const [statusFilter, setStatusFilter]       = useState('')
@@ -68,6 +62,14 @@ export default function ComplaintsPage() {
     if (!isAuthenticated)
       loadUser().then(() => { if (!useAuthStore.getState().isAuthenticated) router.push('/login') })
   }, [])
+
+  // Fetch teams from DB once authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return
+    teamsApi.list()
+      .then((res) => setTeamOptions(res.data.items))
+      .catch(() => {/* silently ignore — filters just won't appear */})
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -143,25 +145,27 @@ export default function ComplaintsPage() {
           </div>
 
           {/* Team */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-16 flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Team
-            </span>
-            {TEAM_OPTIONS.map((t) => (
-              <button
-                key={t.slug}
-                onClick={() => toggleTeam(t.slug)}
-                className={cn(
-                  'rounded-full border px-3 py-1 text-[11px] font-semibold transition-all',
-                  teams.includes(t.slug)
-                    ? 'border-violet-500/40 bg-violet-500/15 text-violet-300'
-                    : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground/60 hover:border-white/[0.15] hover:text-muted-foreground',
-                )}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
+          {teamOptions.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-16 flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Team
+              </span>
+              {teamOptions.map((t) => (
+                <button
+                  key={t.slug}
+                  onClick={() => toggleTeam(t.slug)}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-[11px] font-semibold transition-all',
+                    teams.includes(t.slug)
+                      ? 'border-violet-500/40 bg-violet-500/15 text-violet-300'
+                      : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground/60 hover:border-white/[0.15] hover:text-muted-foreground',
+                  )}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Clear bar */}
           {hasAdvFilters && (

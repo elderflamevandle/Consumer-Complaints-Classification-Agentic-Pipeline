@@ -11,10 +11,13 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import bleach
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..auth.dependencies import AnalystUser, AnyAuthUser, CurrentUser
+from ..auth.jwt import decode_access_token, JWTError
+from ..db.mongodb import users_col
+from ..models.user import UserDocument
 from ..models.audit_log import AuditAction
 from ..models.complaint import ComplaintStatus
 from ..models.user import UserRole
@@ -317,9 +320,26 @@ async def get_audit_trail(
 # ── WebSocket ─────────────────────────────────────────────────────────────────
 
 @router.websocket("/ws/{complaint_id}")
-async def complaint_websocket(websocket: WebSocket, complaint_id: str):
+async def complaint_websocket(
+    websocket: WebSocket,
+    complaint_id: str,
+    token: str = Query(...),
+):
+    # Authenticate before accepting the connection
+    try:
+        payload = decode_access_token(token)
+        user_id: str = payload.get("sub", "")
+        if not user_id:
+            raise JWTError("missing sub")
+        doc = await users_col().find_one({"_id": user_id})
+        if not doc or not UserDocument.from_mongo(doc).is_active:
+            raise JWTError("inactive or missing user")
+    except JWTError:
+        await websocket.close(code=4001)
+        return
+
     await websocket.accept()
-    logger.info("WS connected for complaint %s", complaint_id)
+    logger.info("WS connected for complaint %s (user=%s)", complaint_id, user_id)
 
     try:
         # Wait up to 2 s for the pipeline queue to appear

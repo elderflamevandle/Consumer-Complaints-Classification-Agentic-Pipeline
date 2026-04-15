@@ -190,6 +190,8 @@ export const adminApi = {
 }
 
 export const teamsApi = {
+  list: () =>
+    api.get<{ items: { id: string; name: string; slug: string }[]; total: number }>('/api/teams'),
   myTeam: () => api.get<{ team: Team; members: User[] }>('/api/teams/me'),
   myComplaints: (params?: { status_filter?: string; limit?: number; skip?: number }) =>
     api.get<PaginatedResponse<Complaint>>('/api/teams/me/complaints', { params }),

@@ -76,6 +76,12 @@ _ISSUE_TEAM_RULES: list[tuple[str, str]] = [
     ("opening an account",                  "checking-savings-account"),
     ("funds being low",                     "checking-savings-account"),
     ("lender or other company charging",    "checking-savings-account"),
+    # Fraud & Security team
+    ("account takeover",                    "fraud-security"),
+    ("unauthorized access",                 "fraud-security"),
+    ("identity fraud",                      "fraud-security"),
+    ("account fraud",                       "fraud-security"),
+    ("fraudulent transaction",              "fraud-security"),
 ]
 
 # Fallback: product_type → team slug when no issue-type rule matches.
@@ -94,6 +100,7 @@ _TEAM_DISPLAY: dict[str, str] = {
     "credit-card":              "Credit Card",
     "credit-reporting":         "Credit Reporting",
     "debt-collection":          "Debt Collection",
+    "fraud-security":           "Fraud & Security",
     "money-transfer":           "Money Transfer",
     "mortgage":                 "Mortgage",
     "vehicle-loan-lease":       "Vehicle Loan & Lease",
