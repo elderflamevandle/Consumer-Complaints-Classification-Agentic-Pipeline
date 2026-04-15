@@ -18,48 +18,86 @@ logger = logging.getLogger(__name__)
 
 # ── Team routing ──────────────────────────────────────────────────────────────
 # Maps keywords found in issue_type (lowercased) → team slug.
+# Slugs MUST match the slug field in the MongoDB teams collection.
 # First matching rule wins (most-specific first).
 _ISSUE_TEAM_RULES: list[tuple[str, str]] = [
-    ("identity theft", "identity-protection"),
-    ("fraud alert", "fraud-security"),
-    ("security freeze", "fraud-security"),
-    ("fraud or scam", "fraud-security"),
-    ("fraud", "fraud-security"),
-    ("scam", "fraud-security"),
-    ("unauthorized transaction", "fraud-security"),
-    ("credit report", "credit-bureau"),
-    ("credit score", "credit-bureau"),
-    ("credit monitoring", "credit-bureau"),
-    ("customer service", "cx-escalations"),
-    ("payment process", "payments-ops"),
-    ("making payment", "payments-ops"),
-    ("money", "payments-ops"),
-    ("transfer", "payments-ops"),
-    ("billing", "billing-resolution"),
-    ("charged", "billing-resolution"),
-    ("purchase shown", "billing-resolution"),
-    ("lender", "billing-resolution"),
+    # Credit Reporting team
+    ("credit monitoring",                   "credit-reporting"),
+    ("identity theft",                      "credit-reporting"),
+    ("improper use of your report",         "credit-reporting"),
+    ("incorrect information on your report","credit-reporting"),
+    ("fraud alert",                         "credit-reporting"),
+    ("security freeze",                     "credit-reporting"),
+    ("unable to get your credit report",    "credit-reporting"),
+    ("investigation into an existing",      "credit-reporting"),
+    ("credit report",                       "credit-reporting"),
+    ("credit score",                        "credit-reporting"),
+    # Debt Collection team
+    ("attempts to collect debt",            "debt-collection"),
+    ("communication tactics",               "debt-collection"),
+    ("electronic communications",           "debt-collection"),
+    ("false statements",                    "debt-collection"),
+    ("threatened to contact",               "debt-collection"),
+    ("negative or legal action",            "debt-collection"),
+    ("written notification about debt",     "debt-collection"),
+    # Money Transfer team
+    ("fraud or scam",                       "money-transfer"),
+    ("incorrect exchange rate",             "money-transfer"),
+    ("lost or stolen money order",          "money-transfer"),
+    ("mobile wallet",                       "money-transfer"),
+    ("money was not available",             "money-transfer"),
+    ("unauthorized transactions",           "money-transfer"),
+    ("wrong amount charged",                "money-transfer"),
+    ("unexpected or other fees",            "money-transfer"),
+    # Mortgage team
+    ("applying for a mortgage",             "mortgage"),
+    ("closing on a mortgage",               "mortgage"),
+    ("struggling to pay mortgage",          "mortgage"),
+    ("trouble during payment process",      "mortgage"),
+    ("mortgage",                            "mortgage"),
+    # Vehicle Loan & Lease team
+    ("getting a loan or lease",             "vehicle-loan-lease"),
+    ("managing the loan or lease",          "vehicle-loan-lease"),
+    ("problems at the end of the loan",     "vehicle-loan-lease"),
+    ("repossession",                        "vehicle-loan-lease"),
+    ("struggling to pay your loan",         "vehicle-loan-lease"),
+    # Credit Card team
+    ("closing your account",                "credit-card"),
+    ("fees or interest",                    "credit-card"),
+    ("getting a credit card",               "credit-card"),
+    ("struggling to pay your bill",         "credit-card"),
+    ("trouble using your card",             "credit-card"),
+    ("purchase shown on your statement",    "credit-card"),
+    ("problem when making payments",        "credit-card"),
+    ("credit card",                         "credit-card"),
+    # Checking & Savings Account team
+    ("closing an account",                  "checking-savings-account"),
+    ("managing an account",                 "checking-savings-account"),
+    ("opening an account",                  "checking-savings-account"),
+    ("funds being low",                     "checking-savings-account"),
+    ("lender or other company charging",    "checking-savings-account"),
 ]
 
-# Falls back to product-type mapping when no issue-type rule matches.
+# Fallback: product_type → team slug when no issue-type rule matches.
 _PRODUCT_TEAM_MAP: dict[str, str] = {
-    "CREDIT_REPORTING": "credit-bureau",
-    "MONEY_TRANSFER": "payments-ops",
-    "DEBT_COLLECTION": "billing-resolution",
-    "CHECKING_SAVINGS_ACCOUNT": "billing-resolution",
-    "CREDIT_CARD": "billing-resolution",
-    "MORTGAGE": "billing-resolution",
-    "VEHICLE_LOAN_LEASE": "billing-resolution",
+    "CHECKING_SAVINGS_ACCOUNT": "checking-savings-account",
+    "CREDIT_CARD":              "credit-card",
+    "CREDIT_REPORTING":         "credit-reporting",
+    "DEBT_COLLECTION":          "debt-collection",
+    "MONEY_TRANSFER":           "money-transfer",
+    "MORTGAGE":                 "mortgage",
+    "VEHICLE_LOAN_LEASE":       "vehicle-loan-lease",
 }
 
 _TEAM_DISPLAY: dict[str, str] = {
-    "fraud-security":    "Fraud & Security",
-    "identity-protection": "Identity Protection",
-    "credit-bureau":     "Credit Bureau",
-    "cx-escalations":    "Customer Experience",
-    "payments-ops":      "Payments Operations",
-    "billing-resolution": "Billing Resolution",
-    "general-resolution": "General Complaint Resolution",
+    "checking-savings-account": "Checking & Savings Account",
+    "credit-card":              "Credit Card",
+    "credit-reporting":         "Credit Reporting",
+    "debt-collection":          "Debt Collection",
+    "money-transfer":           "Money Transfer",
+    "mortgage":                 "Mortgage",
+    "vehicle-loan-lease":       "Vehicle Loan & Lease",
+    "general-resolution":       "General Complaint Resolution",
 }
 
 
