@@ -51,7 +51,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-RUN chown -R appuser:appuser /app
+# Create logs directory and grant write access to appuser.
+# The volume mount (./logs:/app/logs) will overlay this at runtime,
+# but we create it here so cold starts without a mount still work.
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000

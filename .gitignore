@@ -28,3 +28,5 @@ F:\Agentic_Hackathon\legal_knowledge_mcp\.env
 F:\Agentic_Hackathon\nonexistent_chroma_dir_xyz
 
 logs/*.log
+logs/*.jsonl
+logs/*.jsonl.*

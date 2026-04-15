@@ -95,6 +95,8 @@ services:
       # Run `uv run python scripts/seed_vectordb.py` first to populate chroma_db/.
       - ./data:/app/data:ro
       - ./chroma_db:/app/chroma_db
+      # Pipeline execution logs — persisted on the host at ./logs/
+      - ./logs:/app/logs
     depends_on:
       redis:
         condition: service_healthy
